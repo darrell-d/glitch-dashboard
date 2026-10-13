@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101815">
+  <title>glitch / dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23101815'/%3E%3Ctext x='9' y='29' fill='%23c6f294' font-size='30'%3Eg%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-transition="fade">
+  <header class="masthead">
+    <div class="brand">glitch<span class="brand-slash"> / </span><span class="muted">dashboard</span></div>
+    <div class="clock"><span id="date"></span><time id="clock"></time></div>
+  </header>
+
+  <main id="display">
+    <section class="panel active" id="news" aria-labelledby="news-heading">
+      <div class="section-heading"><span class="eyebrow">01 / THE BRIEFING</span><span class="source">The New York Times</span></div>
+      <h1 id="news-heading">A world in motion.</h1>
+      <div id="headlines" class="headlines"><p class="placeholder">Gathering the latest headlines…</p></div>
+      <div class="panel-bottom"><span>NYT / TOP STORIES</span><span id="news-status" role="status">Connecting</span></div>
+    </section>
+
+    <section class="panel" id="weather" aria-labelledby="weather-heading" inert aria-hidden="true">
+      <div class="section-heading"><span class="eyebrow">02 / OUTSIDE</span><span class="source">Open-Meteo</span></div>
+      <h1 id="weather-heading">A little perspective.</h1>
+      <div id="weather-content" class="weather-content"><p class="placeholder">Checking the sky…</p></div>
+      <div class="panel-bottom"><a href="https://open-meteo.com/" target="_blank" rel="noopener">WEATHER DATA / OPEN-METEO</a><span id="weather-status" role="status">Connecting</span></div>
+    </section>
+
+    <section class="panel" id="quote" aria-labelledby="quote-heading" inert aria-hidden="true">
+      <div class="section-heading"><span class="eyebrow" id="quote-heading">03 / SOMETHING TO KEEP</span><span class="source">darrelld.com</span></div>
+      <div class="quote-content"><span class="quote-mark" aria-hidden="true">“</span><blockquote id="quote-text">Finding a thought worth keeping…</blockquote><p id="quote-author" class="quote-author"></p></div>
+      <div class="panel-bottom"><a href="https://darrelld.com/quotes/" target="_blank" rel="noopener">FROM THE QUOTE COLLECTION</a><span id="quote-status" role="status">Connecting</span></div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="panel-nav" aria-label="Dashboard panels"><button data-panel="0" aria-label="News" aria-current="true">01 <span>Headlines</span></button><button data-panel="1" aria-label="Weather">02 <span>Weather</span></button><button data-panel="2" aria-label="Quote">03 <span>A thought</span></button></div>
+    <div class="controls"><button id="pause" aria-label="Pause rotation">Pause</button><button id="fullscreen">Fullscreen</button><button id="settings">Settings</button></div>
+    <span id="countdown" class="countdown" aria-label="Seconds until next panel">30s</span>
+    <div class="progress-track"><div id="progress"></div></div>
+  </footer>
+
+  <dialog id="settings-dialog">
+    <form method="dialog" id="settings-form">
+      <span class="eyebrow">MAKE IT YOURS</span><h2>Display settings</h2>
+      <label for="duration">Seconds per panel</label><input id="duration" type="number" min="5" max="600" value="30" required>
+      <label for="transition">Transition</label><select id="transition"><option value="fade">Soft fade</option><option value="slide">Slide upward</option><option value="none">Instant</option></select>
+      <p>Saved on this browser. Weather location is configured on the server.</p>
+      <div class="dialog-actions"><button value="cancel" formnovalidate>Cancel</button><button value="save" class="primary">Save settings</button></div>
+    </form>
+  </dialog>
+</body>
+</html>

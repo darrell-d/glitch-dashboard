@@ -1,0 +1,5 @@
+.git
+agent-notes
+.env*
+__pycache__
+tests
