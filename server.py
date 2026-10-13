@@ -15,6 +15,8 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from news import select_stories
+
 ROOT = Path(__file__).parent
 NYT_URL = "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
 QUOTE_URL = "https://darrelld.com/quote/json/random"
@@ -36,10 +38,20 @@ def parse_news(raw):
         title = (item.findtext("title") or "").strip()
         link = (item.findtext("link") or "").strip()
         if title and urllib.parse.urlparse(link).scheme == "https":
-            items.append({"title": title, "url": link, "published": item.findtext("pubDate")})
+            categories = []
+            for category in item.findall("category"):
+                value = (category.text or "").strip()
+                if value:
+                    kind = category.get("domain", "").rstrip("/").rsplit("/", 1)[-1]
+                    categories.append((kind, value.casefold()))
+            items.append({"title": title, "url": link, "published": item.findtext("pubDate"),
+                          "description": item.findtext("description") or "", "categories": categories})
     if not items:
         raise ValueError("No headlines in feed")
-    return {"source": "The New York Times", "items": items[:24]}
+    selected = select_stories(items)[:24]
+    return {"source": "The New York Times", "items": [
+        {key: item[key] for key in ("title", "url", "published")} for item in selected
+    ]}
 
 
 def parse_quote(raw):

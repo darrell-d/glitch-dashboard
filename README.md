@@ -21,7 +21,9 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
 ## Panels
 
 - **Headlines:** New York Times homepage RSS. Three headlines per news visit,
-  advancing through up to 24 stories. Links open the original articles.
+  advancing through up to 24 distinct story representatives. Related companions
+  are filtered out, preserving the first article in NYT's feed order. Links open
+  the original articles.
 - **Weather:** Philadelphia current conditions, Fahrenheit first with Celsius
   alongside; feels-like temperature and a five-day forecast in both units.
   Data from [Open-Meteo](https://open-meteo.com/).
@@ -46,6 +48,19 @@ after a 30-second cooldown. Browsers poll independently of panel rotation.
 Last good content is retained in memory and browser storage, marked as cached
 when refresh fails. There is no fabricated sample content. A complete initial
 outage shows an unavailable state while other panels continue rotating.
+
+News selection uses `news.py`, a standard-library implementation of weighted
+TF-IDF/cosine similarity over titles and descriptions, plus headline word overlap
+and corroborating NYT subject/person tags. It selects one representative per
+**inferred homepage story group**, not one per editorial section (World, US,
+etc.). Broad categories or a shared politician alone do not collapse stories.
+Filtering happens before the 24-story limit and never pads a short list with
+related companions. Each feed refresh recalculates the selection.
+
+This is a heuristic: differently worded coverage without useful tags can escape
+filtering, while strongly overlapping unrelated stories can be filtered. RSS does
+not provide the homepage's actual package IDs, so an exact match to its visible
+groups is not guaranteed. The rule thresholds live in `news.py` for refinement.
 
 ## Configuration
 
@@ -88,6 +103,7 @@ make check  # tests plus JavaScript syntax check (requires Node.js)
 ```
 
 Automated checks cover feed adapters, cache TTL, outage retention, cooldown, and
-recovery. Live page and all three API feeds were smoke-tested locally. Browser
+recovery, plus companion filtering and unrelated-story retention. Live page and
+all three API feeds were smoke-tested locally. Browser
 visual QA, physical monitor/casting behavior, and a Docker image build have not
 been performed. No deployment has been made.

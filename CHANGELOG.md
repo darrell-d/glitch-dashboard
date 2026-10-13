@@ -4,6 +4,10 @@
 
 ### Features
 
+- Select one article per inferred homepage story group using dependency-free
+  text similarity and NYT keyword metadata, retaining the first feed entry.
+- Add regression coverage for report/explainer pairs, differently worded
+  companion stories, duplicate URLs, and unrelated stories sharing names.
 - Initialize the dashboard project and capture the three-panel MVP scope.
 - Add full-viewport NYT headlines, Philadelphia weather, and darrelld.com quotes.
 - Show Fahrenheit first with Celsius alongside, including a five-day forecast.

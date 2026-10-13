@@ -8,6 +8,9 @@
 - [x] Build full-viewport news, weather, and quote panels.
 - [x] Add timeout, retry, cached-data, and unavailable states.
 - [x] Add run instructions and focused automated checks.
+- [x] Filter related news companions; retain one article per inferred homepage
+  story group, preserving feed priority.
+- [ ] Refine similarity thresholds against additional real news examples.
 - [ ] Refine news categories and sources with the user.
 - [ ] Refine visual styling with the user.
 - [ ] Select the monitor host and confirm resolution/orientation.

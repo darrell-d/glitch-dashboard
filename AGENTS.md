@@ -12,6 +12,9 @@ CSS, and JavaScript. `make run`, `make test`, and `make check` are entrypoints.
 - Confirmed defaults: Philadelphia, Fahrenheit first with Celsius alongside,
   NYT homepage headlines, and 30-second panel rotation.
 - Keep source/category expansion easy; detailed news preferences are deferred.
+- News should keep one representative per inferred homepage story group, rather
+  than one per editorial section. `news.py` filters companions in feed order;
+  preserve tests for unrelated stories sharing a politician or broad subject.
 - Use `/quote/json/random` for quotes; `/api/quotes/` is a different endpoint.
 - Never store the fullPage.js license in source, documentation, or logs.
 - No deployment or changes to darrelld.com are authorized by this kickoff.
