@@ -22,6 +22,7 @@ QUOTE_URL = "https://darrelld.com/quote/json/random"
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 RAINVIEWER_URL = "https://api.rainviewer.com/public/weather-maps.json"
 DEFAULT_POSTAL_CODE = "19103"
+CITY_CATALOG = ROOT / "data" / "us-major-cities.json"
 
 
 def fetch(url):
@@ -123,65 +124,58 @@ def parse_radar(raw):
     return {"host": host, "frames": parsed}
 
 
-def parse_stations(raw, limit=40):
-    stations = []
-    for feature in json.loads(raw).get("features", []):
-        coordinates = feature.get("geometry", {}).get("coordinates", [])
-        properties = feature.get("properties", {})
-        if len(coordinates) < 2 or not all(isinstance(value, (int, float)) for value in coordinates[:2]):
-            continue
-        name = properties.get("name") or properties.get("stationIdentifier")
-        if not isinstance(name, str) or not name.strip():
-            continue
-        stations.append({"name": name.strip(), "latitude": coordinates[1], "longitude": coordinates[0]})
-        if len(stations) == limit:
-            break
-    return stations
+def load_major_cities(path=CITY_CATALOG):
+    data = json.loads(Path(path).read_text())
+    cities = data.get("cities")
+    if not isinstance(cities, list) or not cities:
+        raise ValueError("Major-city catalog is empty")
+    return cities
 
 
-def select_surrounding_stations(stations, latitude, longitude, limit=8):
+def map_point(latitude, longitude, zoom=8, tile_size=256):
+    size = tile_size * (2 ** zoom)
+    latitude = max(-85.05112878, min(85.05112878, latitude))
+    sine = math.sin(math.radians(latitude))
+    return ((longitude + 180) / 360 * size,
+            (0.5 - math.log((1 + sine) / (1 - sine)) / (4 * math.pi)) * size)
+
+
+def select_major_cities(cities, latitude, longitude, limit=6, width=1920, height=1080):
+    center_x, center_y = map_point(latitude, longitude)
     candidates = []
-    for station in stations:
-        north = station["latitude"] - latitude
-        east = (station["longitude"] - longitude) * math.cos(math.radians(latitude))
-        distance = math.hypot(north, east)
-        if 0.18 <= distance <= 2.6:
-            angle = (math.atan2(east, north) + 2 * math.pi) % (2 * math.pi)
-            candidates.append((station, distance, int(angle / (math.pi / 4)) % 8))
+    for city in cities:
+        x, y = map_point(city["latitude"], city["longitude"])
+        screen_x, screen_y = width / 2 + x - center_x, height / 2 + y - center_y
+        distance = math.hypot(screen_x - width / 2, screen_y - height / 2)
+        if 120 <= screen_x <= width - 90 and 130 <= screen_y <= height - 100 and distance >= 115:
+            score = city["population"] + (500_000 if city.get("capital") else 0)
+            candidates.append((score, city, screen_x, screen_y))
     selected = []
-    for sector in range(8):
-        options = [item for item in candidates if item[2] == sector]
-        if options:
-            selected.append(min(options, key=lambda item: abs(item[1] - 1.0))[0])
-    if len(selected) < limit:
-        for station, distance, _ in sorted(candidates, key=lambda item: abs(item[1] - 1.0)):
-            if station in selected:
-                continue
-            if all(math.hypot(station["latitude"] - item["latitude"],
-                              station["longitude"] - item["longitude"]) >= 0.35 for item in selected):
-                selected.append(station)
-            if len(selected) == limit:
-                break
-    return selected[:limit]
+    for _, city, screen_x, screen_y in sorted(candidates, key=lambda item: -item[0]):
+        if all(math.hypot(screen_x - item[1], screen_y - item[2]) >= 115 for item in selected):
+            selected.append((city, screen_x, screen_y))
+        if len(selected) == limit:
+            break
+    return [item[0] for item in selected]
 
 
-def nearby_temperature_url(stations):
+def nearby_temperature_url(places):
     query = urllib.parse.urlencode({
-        "latitude": ",".join(str(item["latitude"]) for item in stations),
-        "longitude": ",".join(str(item["longitude"]) for item in stations),
+        "latitude": ",".join(str(item["latitude"]) for item in places),
+        "longitude": ",".join(str(item["longitude"]) for item in places),
         "current": "temperature_2m", "temperature_unit": "fahrenheit", "timezone": "auto",
     }, safe=",")
     return "https://api.open-meteo.com/v1/forecast?" + query
 
 
-def add_station_temperatures(stations, raw):
+def add_temperatures(places, raw):
     data = json.loads(raw)
     responses = data if isinstance(data, list) else [data]
     result = []
-    for station, response in zip(stations, responses):
+    for place, response in zip(places, responses):
         temperature = response.get("current", {}).get("temperature_2m")
         if isinstance(temperature, (int, float)) and math.isfinite(temperature):
-            result.append({**station, "temperature": temperature})
+            result.append({**place, "temperature": temperature})
     return result
 
 
@@ -252,8 +246,9 @@ class NewsFeed:
 
 
 class LocationFeeds:
-    def __init__(self, fetcher=fetch):
+    def __init__(self, fetcher=fetch, cities=None):
         self.fetcher = fetcher
+        self.cities = cities if cities is not None else load_major_cities()
         self.lock = threading.Lock()
         self.locations = {}
         self.weather = {}
@@ -292,16 +287,10 @@ class LocationFeeds:
     def _load_radar(self, postal_code):
         location = self._resolved(postal_code)
         radar = parse_radar(self.fetcher(RAINVIEWER_URL))
-        point_url = f'https://api.weather.gov/points/{location["latitude"]:.4f},{location["longitude"]:.4f}'
-        point = json.loads(self.fetcher(point_url))
-        stations_url = point.get("properties", {}).get("observationStations", "")
-        stations = []
-        if stations_url.startswith("https://api.weather.gov/"):
-            stations = select_surrounding_stations(parse_stations(self.fetcher(stations_url)),
-                                                   location["latitude"], location["longitude"])
-        if stations:
-            stations = add_station_temperatures(stations, self.fetcher(nearby_temperature_url(stations)))
-        return {**radar, "location": location, "stations": stations}
+        cities = select_major_cities(self.cities, location["latitude"], location["longitude"])
+        if cities:
+            cities = add_temperatures(cities, self.fetcher(nearby_temperature_url(cities)))
+        return {**radar, "location": location, "cities": cities}
 
 
 def make_feeds():

@@ -88,11 +88,11 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .radar-legend i:nth-of-type(5) { background:#d72d25; }
 .radar-legend i:nth-of-type(6) { margin-right:8px; background:#8f173a; }
 .radar-temperatures { position:absolute; z-index:2; inset:0; pointer-events:none; }
-.radar-temperature { position:absolute; transform:translate(-50%,-50%); min-width:92px; padding:7px 10px; border:1px solid #ffffff38; border-radius:3px; background:#0b1415d9; text-align:center; box-shadow:0 4px 20px #0008; }
-.radar-temperature strong { display:block; font-family:var(--serif); font-size:clamp(22px,2vw,44px); font-weight:400; line-height:1; }
-.radar-temperature span { display:block; max-width:150px; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#bcc8c0; font-size:clamp(9px,.7vw,14px); }
-.radar-temperature.home { border-color:var(--accent); color:var(--accent); }
-.radar-temperature.home::after { content:''; position:absolute; left:50%; bottom:-13px; width:2px; height:12px; background:var(--accent); }
+.radar-temperature { position:absolute; transform:translate(-50%,-50%); min-width:108px; padding:4px 8px; color:#f5f3dc; text-align:center; text-shadow:0 2px 3px #000,0 0 8px #000,0 0 2px #000; }
+.radar-temperature strong { display:block; font-family:var(--sans); font-size:clamp(26px,2.3vw,52px); font-weight:700; line-height:.95; letter-spacing:-.05em; }
+.radar-temperature span { display:block; max-width:170px; margin-bottom:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff; font-size:clamp(9px,.75vw,16px); font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.radar-temperature.home strong { color:var(--accent); }
+.radar-temperature.home span::before { content:'●'; color:var(--accent); font-size:.65em; margin-right:5px; vertical-align:1px; }
 .radar-bottom { position:absolute; z-index:2; left:clamp(24px,4.5vw,100px); bottom:76px; color:#c2ccc5; font-size:clamp(10px,.8vw,16px); text-shadow:0 2px 8px #000; }
 .quote-content { flex:1; min-height:0; display:flex; align-items:center; padding:5vh 8vw 4vh; overflow:hidden; }
 .quote-lockup { width:100%; max-width:1500px; border-left:2px solid var(--accent); padding-left:clamp(28px,4vw,80px); }

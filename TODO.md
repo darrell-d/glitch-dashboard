@@ -11,7 +11,7 @@
 - [x] Polish hourly spacing/dividers and correct crescent phase masking.
 - [x] Use Meteocons with weekly style rotation, a settings override, and a configurable monochrome color.
 - [ ] Add air quality, smoke, pollen, and other local weather-event data after choosing a layout.
-- [x] Add a ZIP-centered full-screen regional map with animated precipitation radar and nearby temperatures.
+- [x] Add a ZIP-centered full-screen regional map with animated precipitation radar and major-city temperatures.
 - [x] Make weather, timezone, and radar location browser-configurable by US ZIP code.
 
 - [ ] Replace the fixed panel sequence with an extensible screen registry and lifecycle hooks.

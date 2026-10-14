@@ -53,7 +53,8 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   Data and icon attribution is in Settings instead of on the weather screen.
 - **Regional radar:** A full-screen map centered on the selected ZIP, with four
   recent precipitation frames animated over OpenStreetMap and current temperatures
-  at nearby NWS reporting locations. Provider details remain in Settings so the
+  over a restrained set of major cities selected by population and capital status.
+  Provider details remain in Settings so the
   map itself stays visually quiet. Missing radar data does not stop the rest of the rotation.
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`, set in
   an editorial lockup with a vertical accent rule and the author below a fine rule.
@@ -129,7 +130,7 @@ cached response without `is_day` falls back to the configured timezone's hour.
 
 The Python server serves the page and fetches allowlisted upstream services, avoiding
 cross-origin feed restrictions. News/weather are cached for 10 minutes and
-quotes for 90 seconds; radar metadata and nearby temperatures are cached for five
+quotes for 90 seconds; radar metadata and nearby city temperatures are cached for five
 minutes, and ZIP lookups for 24 hours. Requests time out after 8 seconds, and failed feeds retry
 after a 30-second cooldown. Browsers poll independently of panel rotation.
 Last good content is retained in memory and browser storage, marked as cached
@@ -193,6 +194,6 @@ recovery, companion filtering, unrelated-story retention, newspaper metadata,
 edition sequencing across refreshes, actual application rotation/navigation,
 direct story links, and failed-image fallback using a minimal DOM harness.
 These checks do not verify browser layout. The live APIs, full-screen radar layout,
-animation, station labels, and ZIP change from 19103 to 10001 and back were
+animation, major-city labels, and ZIP change from 19103 to 10001 and back were
 smoke-tested in Chrome. Physical monitor/casting behavior and a Docker image build
 have not been tested. No deployment has been made.

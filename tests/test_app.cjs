@@ -64,7 +64,7 @@ async function app(hash = '', { storyCount = 3, weather = null } = {}) {
       if (url.startsWith('/api/radar')) return { data: { host: 'https://tilecache.rainviewer.com',
         location: { location: 'Philadelphia', region: 'Pennsylvania', postal_code: '19103', latitude: 39.95, longitude: -75.16 },
         frames: [{ time: 1791996000, path: '/v2/radar/abc123' }],
-        stations: [{ name: 'Wings Field', latitude: 40.14, longitude: -75.26, temperature: 69 }] },
+        cities: [{ name: 'Harrisburg', latitude: 40.27, longitude: -76.89, temperature: 69 }] },
         updated_at: new Date().toISOString(), stale: false };
       throw new Error('Other feed offline');
     } }),
@@ -172,7 +172,8 @@ test('radar screen is centered on the configured ZIP and has live map layers', a
   screen.run("showPanel(screens.findIndex((screen) => screen.panel === 'radar'))");
   assert.equal(screen.elements.radar.classList.contains('active'), true);
   assert.ok(screen.elements['radar-map'].children.length >= 2);
-  assert.equal(screen.elements['radar-temperatures'].children[0].children[1].textContent, 'Wings Field');
+  assert.equal(screen.elements['radar-temperatures'].children[0].children[0].textContent, 'Harrisburg');
+  assert.equal(screen.elements['radar-temperatures'].children[0].children[1].textContent, '69°');
 });
 
 test('radar display omits the title block and visible provider credit line', () => {

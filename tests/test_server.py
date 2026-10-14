@@ -3,10 +3,10 @@ import io
 import unittest
 from unittest.mock import Mock, patch
 
-from server import (Feed, add_station_temperatures, fetch, fetch_head, location_url,
-                    nearby_temperature_url, normalize_postal_code, parse_location,
-                    parse_news, parse_quote, parse_radar, parse_stations, parse_weather,
-                    select_surrounding_stations, weather_url)
+from server import (Feed, add_temperatures, fetch, fetch_head, load_major_cities,
+                    location_url, nearby_temperature_url, normalize_postal_code,
+                    parse_location, parse_news, parse_quote, parse_radar, parse_weather,
+                    select_major_cities, weather_url)
 
 
 class FeedTests(unittest.TestCase):
@@ -144,29 +144,23 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_radar(json.dumps({"host": "https://example.com", "radar": {"past": frames}}))
 
-    def test_nearby_station_temperatures_use_one_batched_request(self):
-        stations = parse_stations(json.dumps({"features": [{
-            "geometry": {"coordinates": [-75.26, 40.14]},
-            "properties": {"name": "Wings Field"}}, {
-            "geometry": {"coordinates": [-75.60, 40.23]},
-            "properties": {"name": "Pottstown"}}]}))
-        url = nearby_temperature_url(stations)
-        self.assertIn("latitude=40.14,40.23", url)
-        result = add_station_temperatures(stations, json.dumps([
+    def test_nearby_city_temperatures_use_one_batched_request(self):
+        cities = [
+            {"name": "Harrisburg", "latitude": 40.2732, "longitude": -76.8867},
+            {"name": "Baltimore", "latitude": 39.2904, "longitude": -76.6122},
+        ]
+        url = nearby_temperature_url(cities)
+        self.assertIn("latitude=40.2732,39.2904", url)
+        result = add_temperatures(cities, json.dumps([
             {"current": {"temperature_2m": 69.4}}, {"current": {"temperature_2m": 67.1}}]))
         self.assertEqual([item["temperature"] for item in result], [69.4, 67.1])
 
-    def test_surrounding_stations_are_distributed_by_direction(self):
-        center = (40.0, -75.0)
-        stations = [
-            {"name": "near", "latitude": 40.05, "longitude": -75.0},
-            {"name": "north", "latitude": 41.0, "longitude": -75.0},
-            {"name": "east", "latitude": 40.0, "longitude": -73.8},
-            {"name": "south", "latitude": 39.0, "longitude": -75.0},
-            {"name": "west", "latitude": 40.0, "longitude": -76.2},
-        ]
-        selected = select_surrounding_stations(stations, *center)
-        self.assertEqual({item["name"] for item in selected}, {"north", "east", "south", "west"})
+    def test_radar_prefers_major_cities_and_state_capitals(self):
+        selected = select_major_cities(load_major_cities(), 39.95238, -75.16362)
+        names = {item["name"] for item in selected}
+        self.assertIn("Harrisburg", names)
+        self.assertNotIn("Lancaster", names)
+        self.assertTrue(all("Airport" not in name for name in names))
 
 
 if __name__ == "__main__":

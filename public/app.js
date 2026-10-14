@@ -234,18 +234,18 @@ function renderRadar(data) {
   if (Number.isFinite(currentTemperature)) {
     labels.push({ name: config.location, temperature: currentTemperature, latitude, longitude, home: true });
   }
-  labels.push(...data.stations.map((station) => ({ ...station, home: false })));
+  labels.push(...(data.cities || data.stations || []).map((city) => ({ ...city, home: false })));
   const occupied = [];
-  $('radar-temperatures').replaceChildren(...labels.flatMap((station) => {
-    const point = RadarMap.viewportPoint(station.latitude, station.longitude,
+  $('radar-temperatures').replaceChildren(...labels.flatMap((city) => {
+    const point = RadarMap.viewportPoint(city.latitude, city.longitude,
       latitude, longitude, width, height, 8, 256);
-    if (point.x < 70 || point.x > width - 70 || point.y < 190 || point.y > height - 100) return [];
-    if (!station.home && occupied.some((other) => Math.hypot(other.x - point.x, other.y - point.y) < 130)) return [];
+    if (point.x < 70 || point.x > width - 70 || point.y < 120 || point.y > height - 90) return [];
+    if (!city.home && occupied.some((other) => Math.hypot(other.x - point.x, other.y - point.y) < 110)) return [];
     occupied.push(point);
-    const label = node('div', `radar-temperature${station.home ? ' home' : ''}`);
+    const label = node('div', `radar-temperature${city.home ? ' home' : ''}`);
     label.style.left = `${point.x}px`;
     label.style.top = `${point.y}px`;
-    label.append(node('strong', '', `${number(station.temperature)}°`), node('span', '', station.name));
+    label.append(node('span', '', city.name), node('strong', '', `${number(city.temperature)}°`));
     return [label];
   }));
   showRadarFrame(radarFrameIndex);

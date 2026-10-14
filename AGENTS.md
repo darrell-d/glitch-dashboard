@@ -37,8 +37,9 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
 - Weather location is a browser-saved US ZIP code, defaulting to 19103. The server
   resolves it to coordinates and timezone; do not hardcode a city into display logic.
 - Regional radar uses four recent RainViewer frames over visible OpenStreetMap tiles,
-  centered on the selected ZIP, with nearby NWS reporting locations and Open-Meteo
-  temperatures. Keep provider details in Settings and tile requests limited to the viewport.
+  centered on the selected ZIP, with major-city locations from a pinned GeoNames
+  catalog and Open-Meteo temperatures. Prefer capitals and population centers while
+  keeping labels sparse. Keep provider details in Settings and tile requests limited to the viewport.
 - Quote pages use the editorial-rule layout without a quotation-mark glyph,
   collection labels, or darrelld.com links.
 - Display loading, unavailable, and stale states honestly; do not present sample
