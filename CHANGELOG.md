@@ -4,6 +4,10 @@
 
 ### Features
 
+- Add a full-screen regional map with four animated RainViewer precipitation
+  frames, nearby reporting-area temperatures, and visible map attribution.
+- Replace fixed weather coordinates with a browser-saved US ZIP setting that
+  drives the resolved place name, timezone, forecast, and radar center.
 - Document the long-term magic-mirror vision, including unattended operation,
   full-resolution presentation, generative-art screens, and an extensible screen lifecycle.
 - Add regional animated radar and surrounding-city temperatures to the planned
@@ -52,6 +56,7 @@
 
 ### Security
 
+- Validate ZIP input and constrain discovered radar and NWS URLs to expected HTTPS hosts.
 - Fetch only fixed upstream feeds on the server and render feed text safely.
 - Bind localhost by default and keep license keys out of the application.
 
@@ -66,6 +71,8 @@
 
 ### Performance
 
+- Render only visible map tiles; cache ZIP resolutions for 24 hours and radar data
+  for five minutes, batching nearby temperatures into one Open-Meteo request.
 - Cache publishers independently and fetch them concurrently, retaining healthy
   publishers when another source fails.
 

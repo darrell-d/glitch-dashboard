@@ -16,7 +16,8 @@ make run
 
 Open **http://localhost:8080**. Settings (bottom right) controls screen duration,
 fade, slide, or instant transitions, and the weather icon style. Defaults: 30
-seconds, soft fade, and a Meteocons style that changes each calendar week.
+seconds, soft fade, a Meteocons style that changes each calendar week, and ZIP
+code 19103. Changing the ZIP updates weather, clock timezone, and regional radar.
 Controls appear when hovering over or focusing the footer, and on small screens.
 
 Keyboard: **← / →** switch panels, **Space** pauses/resumes, **F** toggles
@@ -38,7 +39,7 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   article links are omitted from the display. Only short descriptions are shown, with no invented
   article text or generated bullet summaries. Stories with missing or failed
   images use a text-focused layout.
-- **Weather:** Philadelphia current conditions, Fahrenheit first with Celsius
+- **Weather:** Current conditions for the ZIP selected in Settings, Fahrenheit first with Celsius
   alongside; feels-like temperature, a compact 12-hour forecast with rain chance,
   and a five-day forecast in both units. A
   large condition illustration fills the center, with day/night-aware sun/moon,
@@ -50,10 +51,14 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   A secondary lunar readout shows the current moon phase and illuminated
   percentage using a local astronomical calculation.
   Data and icon attribution is in Settings instead of on the weather screen.
+- **Regional radar:** A full-screen map centered on the selected ZIP, with four
+  recent precipitation frames animated over OpenStreetMap and current temperatures
+  at nearby NWS reporting locations. Map and radar attribution remain visible on
+  the screen. Missing radar data does not stop the rest of the rotation.
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`, set in
   an editorial lockup with a vertical accent rule and the author below a fine rule.
 
-Each rotation shows **three individual story pages → weather → quote**, then
+Each rotation shows **three individual story pages → weather → radar → quote**, then
 advances to the next batch of stories. There is no headline list. Every screen uses the
 configured duration (30 seconds by default). The edition's stories stay together
 while new feed data is held for the next batch, so a refresh does not replace
@@ -88,7 +93,7 @@ which may differ from homepage placement. The related-story filter runs before
 the four-story limit. Fewer are shown if there are insufficient distinct stories.
 Publishers are interleaved by rank: each first story, then each second story, up
 to 40 total. Cross-publisher coverage is retained to preserve four per source.
-Weather and quote remain between batches of three stories.
+Weather, radar, and quote remain between batches of three stories.
 
 `sources.py` configures the endpoints. CNN's legacy RSS contains old 2023 stories
 and is not used. WSJ's automated homepage access is blocked, so World News is
@@ -122,9 +127,10 @@ the location; quote collection labels and outbound source links are removed.
 Weather conditions come from the provider's WMO code and `is_day` flag; an older
 cached response without `is_day` falls back to the configured timezone's hour.
 
-The Python server serves the page and fetches fixed upstream URLs, avoiding
+The Python server serves the page and fetches allowlisted upstream services, avoiding
 cross-origin feed restrictions. News/weather are cached for 10 minutes and
-quotes for 90 seconds. Requests time out after 8 seconds, and failed feeds retry
+quotes for 90 seconds; radar metadata and nearby temperatures are cached for five
+minutes, and ZIP lookups for 24 hours. Requests time out after 8 seconds, and failed feeds retry
 after a 30-second cooldown. Browsers poll independently of panel rotation.
 Last good content is retained in memory and browser storage, marked as cached
 when refresh fails. There is no fabricated sample content. A complete initial
@@ -145,18 +151,16 @@ groups is not guaranteed. The rule thresholds live in `news.py` for refinement.
 
 ## Configuration
 
-Server environment variables (defaults shown):
+The default ZIP can be changed for new browsers with one server environment variable:
 
 ```sh
-WEATHER_LOCATION=Philadelphia \
-WEATHER_LATITUDE=39.9526 \
-WEATHER_LONGITUDE=-75.1652 \
-DASHBOARD_TIMEZONE=America/New_York \
+DASHBOARD_ZIP=19103 \
 python3 server.py
 ```
 
-The timezone controls the dashboard clock and weather forecast. Display settings
-are browser-local; server configuration applies to all connected browsers.
+Each browser can override that default in Settings. The ZIP is resolved through
+Open-Meteo to obtain the display name, coordinates, and timezone; the saved setting
+then drives the dashboard clock, forecast, and map center.
 
 For another device on a trusted LAN, run `python3 server.py --host 0.0.0.0` and
 open `http://<server-lan-ip>:8080` from that device. The display device only needs
@@ -183,11 +187,12 @@ make test   # standard-library unit tests
 make check  # tests, JS syntax, edition sequencing, app navigation (requires Node.js)
 ```
 
-Automated checks cover feed adapters, cache TTL, outage retention, cooldown, and
+Automated checks cover feed adapters, ZIP resolution, radar frame validation and
+projection, cache TTL, outage retention, cooldown, and
 recovery, companion filtering, unrelated-story retention, newspaper metadata,
 edition sequencing across refreshes, actual application rotation/navigation,
 direct story links, and failed-image fallback using a minimal DOM harness.
-These checks do not verify browser layout. Live page and
-all three API feeds were smoke-tested locally. Browser
-visual QA, physical monitor/casting behavior, and a Docker image build have not
-been performed. No deployment has been made.
+These checks do not verify browser layout. The live APIs, full-screen radar layout,
+animation, station labels, and ZIP change from 19103 to 10001 and back were
+smoke-tested in Chrome. Physical monitor/casting behavior and a Docker image build
+have not been tested. No deployment has been made.

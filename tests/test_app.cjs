@@ -6,6 +6,7 @@ const vm = require('node:vm');
 const { createEdition } = require('../public/edition.js');
 const WeatherVisual = require('../public/weather.js');
 const MoonPhase = require('../public/moon.js');
+const RadarMap = require('../public/radar.js');
 
 // Exercise the actual app's navigation/timer with a minimal DOM, without a browser.
 class Element {
@@ -51,15 +52,20 @@ async function app(hash = '', { storyCount = 3, weather = null } = {}) {
     querySelector: (selector) => extras[selector],
     addEventListener: (event, callback) => { listeners[event] = callback; },
   };
-  const context = vm.createContext({ document, location, DashboardEdition: { createEdition }, WeatherVisual, MoonPhase,
+  const context = vm.createContext({ document, location, DashboardEdition: { createEdition }, WeatherVisual, MoonPhase, RadarMap,
     window: { addEventListener() {} }, history: { replaceState: (_, __, hash) => { location.hash = hash; } },
     localStorage: { getItem: () => null, setItem() {} }, performance: { now: () => now },
     getComputedStyle: () => ({ fontSize: '32px' }), requestAnimationFrame: (callback) => frames.push(callback),
     setInterval() {}, setTimeout() {}, clearTimeout() {}, AbortController,
     fetch: async (url) => ({ ok: true, json: async () => {
-      if (url === '/api/config') return { location: 'Philadelphia', timezone: 'America/New_York' };
+      if (url.startsWith('/api/config')) return { location: 'Philadelphia', region: 'Pennsylvania', postal_code: '19103', latitude: 39.95, longitude: -75.16, timezone: 'America/New_York' };
       if (url === '/api/news') return { data: { items }, updated_at: new Date().toISOString(), stale: false };
-      if (url === '/api/weather' && weather) return { data: weather, updated_at: new Date().toISOString(), stale: false };
+      if (url.startsWith('/api/weather') && weather) return { data: weather, updated_at: new Date().toISOString(), stale: false };
+      if (url.startsWith('/api/radar')) return { data: { host: 'https://tilecache.rainviewer.com',
+        location: { location: 'Philadelphia', region: 'Pennsylvania', postal_code: '19103', latitude: 39.95, longitude: -75.16 },
+        frames: [{ time: 1791996000, path: '/v2/radar/abc123' }],
+        stations: [{ name: 'Wings Field', latitude: 40.14, longitude: -75.26, temperature: 69 }] },
+        updated_at: new Date().toISOString(), stale: false };
       throw new Error('Other feed offline');
     } }),
   });
@@ -159,6 +165,16 @@ test('story controls reach weather and return to stories without a headline list
   screen.listeners.keydown({ key: 'ArrowLeft', target: { tagName: 'BODY' }, preventDefault() {} });
   assert.equal(screen.elements.article.classList.contains('active'), true);
   assert.equal(screen.elements['article-title'].textContent, 'Story 2');
+});
+
+test('radar screen is centered on the configured ZIP and has live map layers', async () => {
+  const screen = await app();
+  screen.run("showPanel(screens.findIndex((screen) => screen.panel === 'radar'))");
+  assert.equal(screen.elements.radar.classList.contains('active'), true);
+  assert.equal(screen.elements['radar-heading'].textContent, 'Philadelphia radar');
+  assert.match(screen.elements['radar-location'].textContent, /19103/);
+  assert.ok(screen.elements['radar-map'].children.length >= 2);
+  assert.equal(screen.elements['radar-temperatures'].children[0].children[1].textContent, 'Wings Field');
 });
 
 test('progress advances on animation frames between seconds, freezes on pause, and resumes', async () => {

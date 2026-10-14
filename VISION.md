@@ -121,8 +121,8 @@ screen module when tighter lifecycle or performance control is worthwhile.
    renderer.
 4. Add more mathematical and procedural screens behind the same interface.
 5. Add weather-event data after selecting its visual treatment and providers.
-6. Add a full-screen regional radar screen centered on Philadelphia, with a
-   time legend and surrounding-city temperature labels.
+6. Add a full-screen regional radar screen centered on the browser-configured ZIP,
+   with a time legend and nearby reporting-area temperature labels. (Complete.)
 7. Harden startup, recovery, caching, and diagnostics for unattended use.
 8. Optimize rendering and kiosk setup for the selected monitor and playback device.
 
@@ -133,6 +133,6 @@ screen module when tighter lifecycle or performance control is worthwhile.
 - Desired balance and timing between information screens and art screens.
 - Whether brightness or palette should adapt by time of day.
 - Whether any future presence sensor or remote control should influence rotation.
-- Pollen provider for Philadelphia; the current Open-Meteo pollen forecast is
+- Pollen provider for the selected location; the current Open-Meteo pollen forecast is
   limited to Europe.
 

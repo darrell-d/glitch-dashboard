@@ -19,6 +19,9 @@ from sources import SOURCES, load_source, parse_news
 
 ROOT = Path(__file__).parent
 QUOTE_URL = "https://darrelld.com/quote/json/random"
+GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+RAINVIEWER_URL = "https://api.rainviewer.com/public/weather-maps.json"
+DEFAULT_POSTAL_CODE = "19103"
 
 
 def fetch(url):
@@ -31,7 +34,7 @@ def fetch(url):
         if len(data) > 2_000_000:
             raise ValueError("Feed exceeds size limit")
         return data
-    request = urllib.request.Request(url, headers={"User-Agent": "glitch-dashboard/0.1"})
+    request = urllib.request.Request(url, headers={"User-Agent": "glitch-dashboard/0.2 (lain@precursordigital.com)"})
     with urllib.request.urlopen(request, timeout=8) as response:
         data = response.read(2_000_001)
     if len(data) > 2_000_000:
@@ -40,7 +43,7 @@ def fetch(url):
 
 
 def fetch_head(url):
-    request = urllib.request.Request(url, headers={"User-Agent": "glitch-dashboard/0.1"})
+    request = urllib.request.Request(url, headers={"User-Agent": "glitch-dashboard/0.2 (lain@precursordigital.com)"})
     with urllib.request.urlopen(request, timeout=8) as response:
         data = b""
         # CNN embeds substantial scripts before its public social metadata.
@@ -72,6 +75,114 @@ def weather_url(latitude, longitude, timezone_name):
         "timezone": timezone_name, "forecast_days": 5, "forecast_hours": 12,
     })
     return "https://api.open-meteo.com/v1/forecast?" + query
+
+
+def normalize_postal_code(value):
+    value = (value or "").strip()
+    if len(value) == 10 and value[5] == "-" and value[:5].isdigit() and value[6:].isdigit():
+        value = value[:5]
+    if len(value) != 5 or not value.isdigit():
+        raise ValueError("Postal code must be five digits")
+    return value
+
+
+def location_url(postal_code):
+    query = urllib.parse.urlencode({
+        "name": normalize_postal_code(postal_code), "count": 5,
+        "language": "en", "format": "json", "countryCode": "US",
+    })
+    return f"{GEOCODING_URL}?{query}"
+
+
+def parse_location(raw, postal_code):
+    postal_code = normalize_postal_code(postal_code)
+    results = json.loads(raw).get("results") or []
+    match = next((item for item in results if postal_code in item.get("postcodes", [])), None)
+    if not match:
+        raise ValueError("Postal code was not found")
+    latitude, longitude = match.get("latitude"), match.get("longitude")
+    if not isinstance(latitude, (float, int)) or not isinstance(longitude, (float, int)):
+        raise ValueError("Location coordinates are missing")
+    return {
+        "postal_code": postal_code, "location": match["name"],
+        "region": match.get("admin1") or "", "latitude": latitude,
+        "longitude": longitude, "timezone": match.get("timezone") or "UTC",
+    }
+
+
+def parse_radar(raw):
+    data = json.loads(raw)
+    host = data.get("host", "")
+    if host != "https://tilecache.rainviewer.com":
+        raise ValueError("Unexpected radar tile host")
+    frames = data.get("radar", {}).get("past", [])[-4:]
+    parsed = [{"time": frame["time"], "path": frame["path"]} for frame in frames
+              if isinstance(frame.get("time"), int) and frame.get("path", "").startswith("/v2/radar/")]
+    if not parsed:
+        raise ValueError("Radar frames are missing")
+    return {"host": host, "frames": parsed}
+
+
+def parse_stations(raw, limit=40):
+    stations = []
+    for feature in json.loads(raw).get("features", []):
+        coordinates = feature.get("geometry", {}).get("coordinates", [])
+        properties = feature.get("properties", {})
+        if len(coordinates) < 2 or not all(isinstance(value, (int, float)) for value in coordinates[:2]):
+            continue
+        name = properties.get("name") or properties.get("stationIdentifier")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        stations.append({"name": name.strip(), "latitude": coordinates[1], "longitude": coordinates[0]})
+        if len(stations) == limit:
+            break
+    return stations
+
+
+def select_surrounding_stations(stations, latitude, longitude, limit=8):
+    candidates = []
+    for station in stations:
+        north = station["latitude"] - latitude
+        east = (station["longitude"] - longitude) * math.cos(math.radians(latitude))
+        distance = math.hypot(north, east)
+        if 0.18 <= distance <= 2.6:
+            angle = (math.atan2(east, north) + 2 * math.pi) % (2 * math.pi)
+            candidates.append((station, distance, int(angle / (math.pi / 4)) % 8))
+    selected = []
+    for sector in range(8):
+        options = [item for item in candidates if item[2] == sector]
+        if options:
+            selected.append(min(options, key=lambda item: abs(item[1] - 1.0))[0])
+    if len(selected) < limit:
+        for station, distance, _ in sorted(candidates, key=lambda item: abs(item[1] - 1.0)):
+            if station in selected:
+                continue
+            if all(math.hypot(station["latitude"] - item["latitude"],
+                              station["longitude"] - item["longitude"]) >= 0.35 for item in selected):
+                selected.append(station)
+            if len(selected) == limit:
+                break
+    return selected[:limit]
+
+
+def nearby_temperature_url(stations):
+    query = urllib.parse.urlencode({
+        "latitude": ",".join(str(item["latitude"]) for item in stations),
+        "longitude": ",".join(str(item["longitude"]) for item in stations),
+        "current": "temperature_2m", "temperature_unit": "fahrenheit", "timezone": "auto",
+    }, safe=",")
+    return "https://api.open-meteo.com/v1/forecast?" + query
+
+
+def add_station_temperatures(stations, raw):
+    data = json.loads(raw)
+    responses = data if isinstance(data, list) else [data]
+    result = []
+    for station, response in zip(stations, responses):
+        temperature = response.get("current", {}).get("temperature_2m")
+        if isinstance(temperature, (int, float)) and math.isfinite(temperature):
+            result.append({**station, "temperature": temperature})
+    return result
 
 
 def parse_weather(raw):
@@ -140,24 +251,91 @@ class NewsFeed:
                 "error": None if items else "News sources temporarily unavailable"}
 
 
-def make_feeds(config):
-    url = weather_url(config["latitude"], config["longitude"], config["timezone"])
+class LocationFeeds:
+    def __init__(self, fetcher=fetch):
+        self.fetcher = fetcher
+        self.lock = threading.Lock()
+        self.locations = {}
+        self.weather = {}
+        self.radar = {}
+
+    def _location_feed(self, postal_code):
+        with self.lock:
+            return self.locations.setdefault(postal_code, Feed(
+                lambda: parse_location(self.fetcher(location_url(postal_code)), postal_code), 86400))
+
+    def location(self, postal_code):
+        postal_code = normalize_postal_code(postal_code)
+        return self._location_feed(postal_code).get()
+
+    def _resolved(self, postal_code):
+        result = self.location(postal_code)
+        if not result["data"]:
+            raise ValueError("Location unavailable")
+        return result["data"]
+
+    def weather_feed(self, postal_code):
+        postal_code = normalize_postal_code(postal_code)
+        with self.lock:
+            return self.weather.setdefault(postal_code, Feed(lambda: self._load_weather(postal_code), 600))
+
+    def _load_weather(self, postal_code):
+        location = self._resolved(postal_code)
+        return parse_weather(self.fetcher(weather_url(
+            location["latitude"], location["longitude"], location["timezone"])))
+
+    def radar_feed(self, postal_code):
+        postal_code = normalize_postal_code(postal_code)
+        with self.lock:
+            return self.radar.setdefault(postal_code, Feed(lambda: self._load_radar(postal_code), 300))
+
+    def _load_radar(self, postal_code):
+        location = self._resolved(postal_code)
+        radar = parse_radar(self.fetcher(RAINVIEWER_URL))
+        point_url = f'https://api.weather.gov/points/{location["latitude"]:.4f},{location["longitude"]:.4f}'
+        point = json.loads(self.fetcher(point_url))
+        stations_url = point.get("properties", {}).get("observationStations", "")
+        stations = []
+        if stations_url.startswith("https://api.weather.gov/"):
+            stations = select_surrounding_stations(parse_stations(self.fetcher(stations_url)),
+                                                   location["latitude"], location["longitude"])
+        if stations:
+            stations = add_station_temperatures(stations, self.fetcher(nearby_temperature_url(stations)))
+        return {**radar, "location": location, "stations": stations}
+
+
+def make_feeds():
     return {
         "news": NewsFeed({source["id"]: Feed(partial(load_source, source, fetch, fetch_head), 600) for source in SOURCES}),
-        "weather": Feed(lambda: parse_weather(fetch(url)), 600),
         "quote": Feed(lambda: parse_quote(fetch(QUOTE_URL)), 90),
     }
 
 
 class Handler(SimpleHTTPRequestHandler):
-    def __init__(self, *args, feeds, config, **kwargs):
-        self.feeds, self.config = feeds, config
+    def __init__(self, *args, feeds, locations, default_postal_code, **kwargs):
+        self.feeds, self.locations, self.default_postal_code = feeds, locations, default_postal_code
         super().__init__(*args, directory=str(ROOT / "public"), **kwargs)
 
     def do_GET(self):
-        path = urllib.parse.urlparse(self.path).path
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path
+        query = urllib.parse.parse_qs(parsed.query)
+        postal_code = query.get("postal_code", [self.default_postal_code])[0]
         if path == "/api/config":
-            self.send_json(self.config)
+            try:
+                result = self.locations.location(postal_code)
+            except ValueError as error:
+                self.send_json({"error": str(error)}, 400)
+                return
+            self.send_json(result["data"] or {"error": result["error"]}, 200 if result["data"] else 404)
+        elif path in ("/api/weather", "/api/radar"):
+            try:
+                feed = self.locations.weather_feed(postal_code) if path == "/api/weather" else self.locations.radar_feed(postal_code)
+            except ValueError as error:
+                self.send_json({"error": str(error)}, 400)
+                return
+            result = feed.get()
+            self.send_json(result, 200 if result["data"] is not None else 503)
         elif path.startswith("/api/"):
             feed = self.feeds.get(path.removeprefix("/api/"))
             if not feed:
@@ -181,7 +359,7 @@ class Handler(SimpleHTTPRequestHandler):
         if not urllib.parse.urlparse(self.path).path.startswith("/api/"):
             self.send_header("Cache-Control", "no-cache")
         self.send_header("X-Content-Type-Options", "nosniff")
-        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         super().end_headers()
 
     def list_directory(self, path):
@@ -194,20 +372,20 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
-    config = {
-        "location": os.environ.get("WEATHER_LOCATION", "Philadelphia"),
-        "latitude": float(os.environ.get("WEATHER_LATITUDE", "39.9526")),
-        "longitude": float(os.environ.get("WEATHER_LONGITUDE", "-75.1652")),
-        "timezone": os.environ.get("DASHBOARD_TIMEZONE", "America/New_York"),
-    }
-    if not (-90 <= config["latitude"] <= 90 and -180 <= config["longitude"] <= 180):
-        parser.error("Weather coordinates out of range")
-    feeds = make_feeds(config)
-    server = ThreadingHTTPServer((args.host, args.port), partial(Handler, feeds=feeds, config=config))
+    try:
+        default_postal_code = normalize_postal_code(os.environ.get("DASHBOARD_ZIP", DEFAULT_POSTAL_CODE))
+    except ValueError as error:
+        parser.error(str(error))
+    feeds = make_feeds()
+    locations = LocationFeeds()
+    server = ThreadingHTTPServer((args.host, args.port), partial(
+        Handler, feeds=feeds, locations=locations, default_postal_code=default_postal_code))
     # Warm each feed independently so one slow upstream does not block the rest.
-    with ThreadPoolExecutor(max_workers=3) as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
         for feed in feeds.values():
             pool.submit(feed.get)
+        pool.submit(locations.weather_feed(default_postal_code).get)
+        pool.submit(locations.radar_feed(default_postal_code).get)
         print(f"glitch-dashboard: http://{args.host}:{args.port}", flush=True)
         try:
             server.serve_forever()

@@ -11,7 +11,8 @@
 - [x] Polish hourly spacing/dividers and correct crescent phase masking.
 - [x] Use Meteocons with weekly style rotation, a settings override, and a configurable monochrome color.
 - [ ] Add air quality, smoke, pollen, and other local weather-event data after choosing a layout.
-- [ ] Add a full-screen Philadelphia regional map with animated precipitation radar and surrounding-city temperatures.
+- [x] Add a ZIP-centered full-screen regional map with animated precipitation radar and nearby temperatures.
+- [x] Make weather, timezone, and radar location browser-configurable by US ZIP code.
 
 - [ ] Replace the fixed panel sequence with an extensible screen registry and lifecycle hooks.
 - [ ] Add `/Users/darrelldefreitas/code/gen_art/LawnMower` as an autonomous full-screen web screen.
@@ -28,7 +29,7 @@
 - [x] Remove headline overview from rotation and start directly with stories.
 - [x] Animate countdown progress per display frame with pause/resume coverage.
 
-- [x] Philadelphia weather; Fahrenheit first, Celsius alongside.
+- [x] ZIP-based local weather; Fahrenheit first, Celsius alongside.
 - [x] NYT homepage headlines for the first version.
 - [x] 30-second rotation with selectable fade, slide, and instant transitions.
 - [x] Local Python server with fixed-upstream feed fetching and caching.

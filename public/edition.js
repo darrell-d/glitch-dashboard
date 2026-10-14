@@ -5,7 +5,7 @@
     const selected = Array.from({ length: Math.min(3, items.length) }, (_, i) =>
       ({ ...items[((offset + i) % items.length + items.length) % items.length] }));
     return [...(selected.length ? selected.map((item, index) => ({ panel: 'article', item, index, count: selected.length, storyIndex: (offset + index) % items.length })) : [{ panel: 'news' }]),
-      { panel: 'weather' }, { panel: 'quote' }];
+      { panel: 'weather' }, { panel: 'radar' }, { panel: 'quote' }];
   }
   if (typeof module !== 'undefined') module.exports = { createEdition };
   else root.DashboardEdition = { createEdition };

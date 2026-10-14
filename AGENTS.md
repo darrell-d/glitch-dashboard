@@ -10,7 +10,7 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   documented in `VISION.md`.
 - Keep the experience full-viewport and readable at a distance.
 - Keep rotation timing and transition choice configurable.
-- Rotation: three individual story pages, weather, quote, then the next batch.
+- Rotation: three individual story pages, weather, regional radar, quote, then the next batch.
   No headline overview/list. `public/edition.js` fixes the batch during display.
 - Use requestAnimationFrame for smooth elapsed-time progress, preserving pause
   and resume. Keep upstream polling independent of that animation loop.
@@ -34,12 +34,17 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   keep it visually subordinate to current temperature and conditions.
 - Weather includes a compact next-12-hours strip with time, condition, Fahrenheit
   temperature, and precipitation probability; keep the current reading dominant.
+- Weather location is a browser-saved US ZIP code, defaulting to 19103. The server
+  resolves it to coordinates and timezone; do not hardcode a city into display logic.
+- Regional radar uses four recent RainViewer frames over visible OpenStreetMap tiles,
+  centered on the selected ZIP, with nearby NWS reporting locations and Open-Meteo
+  temperatures. Keep map attribution visible and tile requests limited to the viewport.
 - Quote pages use the editorial-rule layout without a quotation-mark glyph,
   collection labels, or darrelld.com links.
 - Display loading, unavailable, and stale states honestly; do not present sample
   content as live data.
 - Keep upstream refresh intervals independent from panel rotation.
-- Confirmed defaults: Philadelphia, Fahrenheit first with Celsius alongside,
+- Confirmed defaults: ZIP 19103, Fahrenheit first with Celsius alongside,
   NYT homepage headlines, and 30-second panel rotation.
 - Keep source/category expansion easy; detailed news preferences are deferred.
 - `sources.py` configures NYT, CNN, Kotaku, WSJ, The Atlantic, POLITICO, WIRED,

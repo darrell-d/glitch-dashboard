@@ -1,12 +1,12 @@
 'use strict';
 
 const $ = (id) => document.getElementById(id);
-const names = ['news', 'weather', 'quote'];
-const panels = ['news', 'article', 'weather', 'quote'];
+const names = ['news', 'weather', 'radar', 'quote'];
+const panels = ['news', 'article', 'weather', 'radar', 'quote'];
 let screens = DashboardEdition.createEdition([]);
 const records = {};
-let config = { location: 'Philadelphia', timezone: 'America/New_York' };
-let options = { duration: 30, transition: 'fade', weatherIconStyle: 'weekly', weatherIconColor: '#dce7d6' };
+let config = { location: 'Local weather', region: '', postal_code: '19103', timezone: 'America/New_York' };
+let options = { duration: 30, transition: 'fade', postalCode: '19103', weatherIconStyle: 'weekly', weatherIconColor: '#dce7d6' };
 let current = 0;
 let newsOffset = 0;
 let paused = false;
@@ -24,6 +24,7 @@ function store(key, value) {
 function validOptions(value) {
   return value && Number.isFinite(value.duration) && value.duration >= 5 && value.duration <= 600
     && ['fade', 'slide', 'none'].includes(value.transition)
+    && (value.postalCode === undefined || /^\d{5}(?:-\d{4})?$/.test(value.postalCode))
     && (value.weatherIconStyle === undefined || ['weekly', ...WeatherVisual.STYLES].includes(value.weatherIconStyle))
     && (value.weatherIconColor === undefined || /^#[0-9a-f]{6}$/i.test(value.weatherIconColor));
 }
@@ -45,6 +46,7 @@ function displayHour(stamp, index) {
   return Number.isInteger(hour) ? `${hour % 12 || 12}${hour < 12 ? 'A' : 'P'}` : '—';
 }
 const condition = WeatherVisual.description;
+const locationQuery = () => `postal_code=${encodeURIComponent(options.postalCode)}`;
 
 function renderNews(data) {
   $('source-status-list').replaceChildren(...(data.sources || []).map((source) => {
@@ -183,6 +185,74 @@ function renderWeather(data) {
   WeatherVisual.hydrate(content);
 }
 
+let radarFrames = [];
+let radarFrameIndex = 0;
+function radarTile(layer, tile, size, source) {
+  const image = node('img');
+  image.alt = '';
+  image.draggable = false;
+  image.loading = 'eager';
+  image.width = size;
+  image.height = size;
+  image.style.left = `${tile.left}px`;
+  image.style.top = `${tile.top}px`;
+  image.style.width = `${size}px`;
+  image.style.height = `${size}px`;
+  image.src = source(tile);
+  layer.append(image);
+}
+
+function showRadarFrame(index) {
+  if (!radarFrames.length) return;
+  radarFrameIndex = ((index % radarFrames.length) + radarFrames.length) % radarFrames.length;
+  radarFrames.forEach((frame, i) => frame.layer.classList.toggle('active', i === radarFrameIndex));
+  const stamp = new Date(radarFrames[radarFrameIndex].time * 1000);
+  $('radar-frame-time').textContent = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric', minute: '2-digit', timeZone: config.timezone,
+  }).format(stamp);
+  $('radar-frame-time').dateTime = stamp.toISOString();
+}
+
+function renderRadar(data) {
+  const map = $('radar-map');
+  const width = map.clientWidth || window.innerWidth || 1920;
+  const height = map.clientHeight || window.innerHeight || 1080;
+  const latitude = data.location.latitude;
+  const longitude = data.location.longitude;
+  const base = node('div', 'radar-layer radar-base');
+  RadarMap.tileLayout(latitude, longitude, width, height, 8, 256).forEach((tile) =>
+    radarTile(base, tile, 256, ({ x, y }) => `https://tile.openstreetmap.org/8/${x}/${y}.png`));
+  radarFrames = data.frames.map((frame) => {
+    const layer = node('div', 'radar-layer radar-precipitation');
+    RadarMap.tileLayout(latitude, longitude, width, height, 7, 512).forEach((tile) =>
+      radarTile(layer, tile, 512, ({ x, y }) => `${data.host}${frame.path}/512/7/${x}/${y}/2/1_1.png`));
+    return { layer, time: frame.time };
+  });
+  map.replaceChildren(base, ...radarFrames.map((frame) => frame.layer));
+  $('radar-heading').textContent = `${config.location} radar`;
+  $('radar-location').textContent = `${config.region ? `${config.region} · ` : ''}${config.postal_code}`;
+  const labels = [];
+  const currentTemperature = records.weather?.data?.current?.temperature_2m;
+  if (Number.isFinite(currentTemperature)) {
+    labels.push({ name: config.location, temperature: currentTemperature, latitude, longitude, home: true });
+  }
+  labels.push(...data.stations.map((station) => ({ ...station, home: false })));
+  const occupied = [];
+  $('radar-temperatures').replaceChildren(...labels.flatMap((station) => {
+    const point = RadarMap.viewportPoint(station.latitude, station.longitude,
+      latitude, longitude, width, height, 8, 256);
+    if (point.x < 70 || point.x > width - 70 || point.y < 190 || point.y > height - 100) return [];
+    if (!station.home && occupied.some((other) => Math.hypot(other.x - point.x, other.y - point.y) < 130)) return [];
+    occupied.push(point);
+    const label = node('div', `radar-temperature${station.home ? ' home' : ''}`);
+    label.style.left = `${point.x}px`;
+    label.style.top = `${point.y}px`;
+    label.append(node('strong', '', `${number(station.temperature)}°`), node('span', '', station.name));
+    return [label];
+  }));
+  showRadarFrame(radarFrameIndex);
+}
+
 function fitQuote() {
   const text = $('quote-text');
   text.style.fontSize = '';
@@ -198,11 +268,11 @@ function renderQuote(data) {
   $('quote-author').textContent = data.author;
   requestAnimationFrame(fitQuote);
 }
-const renderers = { news: renderNews, weather: renderWeather, quote: renderQuote };
+const renderers = { news: renderNews, weather: renderWeather, radar: renderRadar, quote: renderQuote };
 
 async function request(path) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), path === '/api/news' ? 25000 : 15000);
+  const timer = setTimeout(() => controller.abort(), path.startsWith('/api/news') || path.startsWith('/api/radar') ? 25000 : 15000);
   try {
     const response = await fetch(path, { signal: controller.signal, cache: 'no-store' });
     if (!response.ok) throw new Error('Feed unavailable');
@@ -215,9 +285,10 @@ async function refresh(name) {
   if (inflight.has(name)) return;
   inflight.add(name);
   try {
-    const value = await request(`/api/${name}`);
+    const endpoint = name === 'weather' || name === 'radar' ? `/api/${name}?${locationQuery()}` : `/api/${name}`;
+    const value = await request(endpoint);
     if (!value.data || !value.updated_at) throw new Error('Missing feed data');
-    if (name === 'weather') value.configKey = JSON.stringify(config);
+    if (name === 'weather' || name === 'radar') value.configKey = options.postalCode;
     renderers[name](value.data);
     records[name] = value;
     store(name === 'news' ? 'glitch-feed-news-v2' : `glitch-feed-${name}`, value);
@@ -225,8 +296,9 @@ async function refresh(name) {
   } catch {
     if (records[name]) records[name].stale = true;
     else {
-      const messages = { news: 'Headlines are temporarily unavailable.', weather: 'Weather is temporarily unavailable.', quote: 'The quote collection is temporarily unavailable.' };
+      const messages = { news: 'Headlines are temporarily unavailable.', weather: 'Weather is temporarily unavailable.', radar: 'Regional radar is temporarily unavailable.', quote: 'The quote collection is temporarily unavailable.' };
       if (name === 'quote') $('quote-text').textContent = messages[name];
+      else if (name === 'radar') $('radar-heading').textContent = messages[name];
       else $(name === 'news' ? 'headlines' : 'weather-content').replaceChildren(node('p', 'placeholder', messages[name]));
     }
   } finally {
@@ -243,7 +315,7 @@ function updateStatuses() {
       continue;
     }
     const age = Math.max(0, Math.floor((Date.now() - Date.parse(record.updated_at)) / 60000));
-    const stale = record.stale || age >= (name === 'quote' ? 3 : 15);
+    const stale = record.stale || age >= (name === 'quote' ? 3 : name === 'radar' ? 8 : 15);
     $(`${name}-status`).textContent = `${stale ? 'Cached · ' : ''}Updated ${age < 1 ? 'just now' : `${age}m ago`}`;
   }
   $('article-status').textContent = $('news-status').textContent;
@@ -286,6 +358,7 @@ function showPanel(index) {
     $(name).setAttribute('aria-hidden', String(!active));
   });
   if (screen.panel === 'article') renderArticle(screen);
+  if (screen.panel === 'radar') showRadarFrame(radarFrameIndex);
   if (screen.panel === 'quote') { refresh('quote'); requestAnimationFrame(fitQuote); }
   history.replaceState(null, '', `#${screen.panel}`);
   resetTimer();
@@ -340,20 +413,43 @@ $('settings').addEventListener('click', () => {
   setPaused(true);
   $('duration').value = options.duration;
   $('transition').value = options.transition;
+  $('postal-code').value = options.postalCode;
   $('weather-icon-style').value = options.weatherIconStyle;
   $('weather-icon-color').value = options.weatherIconColor;
   $('settings-dialog').returnValue = '';
   $('settings-dialog').showModal();
 });
-$('settings-dialog').addEventListener('close', () => {
+$('settings-dialog').addEventListener('close', async () => {
   if ($('settings-dialog').returnValue === 'save') {
     const value = { duration: Number($('duration').value), transition: $('transition').value,
-      weatherIconStyle: $('weather-icon-style').value, weatherIconColor: $('weather-icon-color').value };
+      postalCode: $('postal-code').value.slice(0, 5), weatherIconStyle: $('weather-icon-style').value,
+      weatherIconColor: $('weather-icon-color').value };
     if (validOptions(value)) {
+      if (value.postalCode !== options.postalCode) {
+        try {
+          config = await request(`/api/config?postal_code=${encodeURIComponent(value.postalCode)}`);
+          delete records.weather;
+          delete records.radar;
+          $('weather-heading').textContent = config.location;
+          $('weather-content').replaceChildren(node('p', 'placeholder', 'Updating local weather…'));
+          $('radar-heading').textContent = `${config.location} radar`;
+          $('radar-location').textContent = `${config.region ? `${config.region} · ` : ''}${config.postal_code}`;
+          $('radar-map').replaceChildren();
+          $('radar-temperatures').replaceChildren();
+        } catch {
+          $('weather-status').textContent = 'ZIP code unavailable · using previous location';
+          $('radar-status').textContent = 'ZIP code unavailable · using previous location';
+          setPaused(wasPaused);
+          return;
+        }
+      }
       options = value;
       store('glitch-display-options', options);
       document.body.dataset.transition = options.transition;
       if (records.weather?.data) renderWeather(records.weather.data);
+      updateClock();
+      refresh('weather');
+      refresh('radar');
       resetTimer();
     }
   }
@@ -367,7 +463,7 @@ document.addEventListener('keydown', (event) => {
   else if (event.key.toLowerCase() === 'f') toggleFullscreen();
   else if (event.key.toLowerCase() === 's') $('settings').click();
 });
-window.addEventListener('resize', () => { fitQuote(); fitArticle(); });
+window.addEventListener('resize', () => { fitQuote(); fitArticle(); if (records.radar?.data) renderRadar(records.radar.data); });
 window.addEventListener('hashchange', () => {
   if (location.hash === '#article') {
     pendingArticle = true;
@@ -380,13 +476,12 @@ window.addEventListener('hashchange', () => {
 if (document.fonts) document.fonts.ready.then(() => { fitQuote(); fitArticle(); });
 
 async function init() {
-  try { config = await request('/api/config'); } catch { /* Keep known initial defaults. */ }
+  try { config = await request(`/api/config?${locationQuery()}`); } catch { /* Keep known initial defaults. */ }
   updateClock();
   for (const name of names) {
     const cached = readStored(name === 'news' ? 'glitch-feed-news-v2' : `glitch-feed-${name}`);
     // Weather cache belongs to a specific location/configuration.
-    const configKey = JSON.stringify(config);
-    if (cached && cached.data && cached.updated_at && (name !== 'weather' || cached.configKey === configKey)) {
+    if (cached && cached.data && cached.updated_at && (!['weather', 'radar'].includes(name) || cached.configKey === options.postalCode)) {
       try {
         renderers[name](cached.data);
         records[name] = { ...cached, stale: true };
@@ -396,8 +491,9 @@ async function init() {
     refresh(name);
   }
   resetTimer();
-  setInterval(() => { refresh('news'); refresh('weather'); }, 60000);
+  setInterval(() => { refresh('news'); refresh('weather'); refresh('radar'); }, 60000);
   setInterval(() => refresh('quote'), 90000);
+  setInterval(() => { if (document.body.dataset.view === 'radar') showRadarFrame(radarFrameIndex + 1); }, 1200);
   setInterval(updateStatuses, 10000);
 }
 function animateProgress() {

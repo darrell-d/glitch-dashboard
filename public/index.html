@@ -6,12 +6,13 @@
   <meta name="theme-color" content="#101815">
   <title>The Daily</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23101815'/%3E%3Ctext x='9' y='29' fill='%23c6f294' font-size='30'%3Eg%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/styles.css?v=daily-13">
-  <link rel="stylesheet" href="/newspaper.css?v=daily-13">
-  <script src="/edition.js?v=daily-13" defer></script>
-  <script src="/weather.js?v=daily-13" defer></script>
-  <script src="/moon.js?v=daily-13" defer></script>
-  <script src="/app.js?v=daily-13" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=daily-14">
+  <link rel="stylesheet" href="/newspaper.css?v=daily-14">
+  <script src="/edition.js?v=daily-14" defer></script>
+  <script src="/weather.js?v=daily-14" defer></script>
+  <script src="/moon.js?v=daily-14" defer></script>
+  <script src="/radar.js?v=daily-14" defer></script>
+  <script src="/app.js?v=daily-14" defer></script>
 </head>
 <body data-transition="fade">
   <main id="display">
@@ -40,9 +41,22 @@
     </section>
 
     <section class="panel" id="weather" aria-labelledby="weather-heading" inert aria-hidden="true">
-      <div class="weather-heading-row"><h1 id="weather-heading">Philadelphia</h1><div class="clock"><span id="date"></span><time id="clock"></time></div></div>
+      <div class="weather-heading-row"><h1 id="weather-heading">Local weather</h1><div class="clock"><span id="date"></span><time id="clock"></time></div></div>
       <div id="weather-content" class="weather-content"><p class="placeholder">Checking the sky…</p></div>
       <div class="panel-bottom"><span id="weather-status" role="status">Connecting</span></div>
+    </section>
+
+    <section class="panel radar" id="radar" aria-labelledby="radar-heading" inert aria-hidden="true">
+      <div id="radar-map" class="radar-map" aria-hidden="true"></div>
+      <div class="radar-shade" aria-hidden="true"></div>
+      <header class="radar-header">
+        <div><span class="radar-kicker">REGIONAL WEATHER</span><h1 id="radar-heading">Local radar</h1><p id="radar-location"></p></div>
+        <div class="radar-time"><span>PRECIPITATION</span><time id="radar-frame-time"></time></div>
+      </header>
+      <div class="radar-legend" aria-label="Precipitation intensity from light to heavy"><span>Light</span><i></i><i></i><i></i><i></i><i></i><i></i><span>Heavy</span></div>
+      <div id="radar-temperatures" class="radar-temperatures"></div>
+      <div class="radar-attribution"><a href="https://www.rainviewer.com/" target="_blank" rel="noopener">Radar © RainViewer</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a></div>
+      <div class="radar-bottom"><span id="radar-status" role="status">Connecting</span></div>
     </section>
 
     <section class="panel" id="quote" aria-labelledby="quote-heading" inert aria-hidden="true">
@@ -63,11 +77,12 @@
       <span class="eyebrow">MAKE IT YOURS</span><h2>Display settings</h2>
       <label for="duration">Seconds per panel</label><input id="duration" type="number" min="5" max="600" value="30" required>
       <label for="transition">Transition</label><select id="transition"><option value="fade">Soft fade</option><option value="slide">Slide upward</option><option value="none">Instant</option></select>
+      <label for="postal-code">Weather ZIP code</label><input id="postal-code" type="text" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{5}(-[0-9]{4})?" maxlength="10" value="19103" required>
       <label for="weather-icon-style">Weather icons</label><select id="weather-icon-style"><option value="weekly">Rotate style every week</option><option value="fill">Fill</option><option value="flat">Flat</option><option value="line">Line</option><option value="monochrome">Monochrome</option></select>
       <div class="color-setting"><label for="weather-icon-color">Monochrome color</label><input id="weather-icon-color" type="color" value="#dce7d6"></div>
-      <p>Saved on this browser. Weather location is configured on the server.</p>
+      <p>Saved on this browser. Weather, clock, and radar follow this ZIP code.</p>
       <details class="source-settings"><summary>News sources</summary><ul id="source-status-list"></ul></details>
-      <p class="data-credit">Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a><br>Weather icons: <a href="https://meteocons.com/" target="_blank" rel="noopener">Meteocons</a> · MIT</p>
+      <p class="data-credit">Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a><br>Radar: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> · Nearby stations: <a href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener">NWS</a><br>Weather icons: <a href="https://meteocons.com/" target="_blank" rel="noopener">Meteocons</a> · MIT</p>
       <div class="dialog-actions"><button value="cancel" formnovalidate>Cancel</button><button value="save" class="primary">Save settings</button></div>
     </form>
   </dialog>
