@@ -17,6 +17,14 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
 - Approved newspaper design: full-height, uncropped square photo on the left,
   cream newspaper column on the right. No dashboard chrome taking photo space.
   Use `/#article` for direct access; maintain story controls and portrait fallback.
+- Display name is "The Daily", in italic Bodoni Moda with local serif fallbacks.
+  Do not add a glitch effect. Keep article counts and outbound article links off
+  the display. Non-square photos use a blurred copy behind the uncropped original.
+- No global app header or visible section names. Each story has a navigation dot,
+  with weather/quote dots after the stories; accessible labels remain.
+- Weather uses local SVG artwork based on WMO condition and `is_day`, plus five
+  forecast icons. No provider/Outside labels on the screen; attribution in Settings.
+- Quote pages show quote/author without collection labels or darrelld.com links.
 - Display loading, unavailable, and stale states honestly; do not present sample
   content as live data.
 - Keep upstream refresh intervals independent from panel rotation.

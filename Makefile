@@ -9,4 +9,5 @@ test:
 check: test
 	node --check public/app.js
 	node --check public/edition.js
-	node --test tests/test_edition.cjs tests/test_app.cjs
+	node --check public/weather.js
+	node --test tests/test_edition.cjs tests/test_app.cjs tests/test_weather.cjs

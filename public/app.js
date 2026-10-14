@@ -13,6 +13,8 @@ let paused = false;
 let started = performance.now();
 let elapsed = 0;
 let pendingArticle = location.hash === '#article';
+let rotationItems = [];
+let dotButtons = [];
 
 function readStored(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
@@ -36,18 +38,47 @@ function node(tag, className, text) {
 }
 function number(value) { return Number.isFinite(value) ? Math.round(value) : '–'; }
 function celsius(value) { return number((value - 32) * 5 / 9); }
-function condition(code) {
-  if (code === 0) return 'Clear skies';
-  if (code === 1) return 'Mostly clear';
-  if (code === 2) return 'Partly cloudy';
-  if (code === 3) return 'Overcast';
-  if ([45, 48].includes(code)) return 'Fog';
-  if ([51, 53, 55, 56, 57].includes(code)) return 'Drizzle';
-  if ([61, 63, 65, 66, 67].includes(code)) return 'Rain';
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return 'Snow';
-  if ([80, 81, 82].includes(code)) return 'Rain showers';
-  if ([95, 96, 99].includes(code)) return 'Thunderstorms';
-  return 'Conditions unavailable';
+const condition = WeatherVisual.description;
+
+function renderNavigation() {
+  dotButtons = [];
+  for (const container of [$('screen-dots'), $('paper-screen-dots')]) {
+    container.replaceChildren();
+    rotationItems.forEach((item, index) => {
+      const button = node('button', 'screen-dot');
+      button.type = 'button';
+      button.dataset.panel = 'article';
+      button.dataset.storyIndex = String(index);
+      button.setAttribute('aria-label', `${item.source || 'News'}: ${item.title}`);
+      button.title = `${item.source || 'News'}: ${item.title}`;
+      button.addEventListener('click', () => {
+        newsOffset = index;
+        screens = DashboardEdition.createEdition(rotationItems, newsOffset);
+        showPanel(0);
+      });
+      dotButtons.push({ button, panel: 'article', storyIndex: index });
+      container.append(button);
+    });
+    for (const [panel, label] of [['weather', 'Weather'], ['quote', 'Quote']]) {
+      const button = node('button', 'screen-dot');
+      button.type = 'button';
+      button.dataset.panel = panel;
+      button.setAttribute('aria-label', label);
+      button.title = label;
+      button.addEventListener('click', () => showPanel(screens.findIndex((screen) => screen.panel === panel)));
+      dotButtons.push({ button, panel });
+      container.append(button);
+    }
+  }
+  updateNavigation();
+}
+
+function updateNavigation() {
+  const screen = screens[current];
+  dotButtons.forEach(({ button, panel, storyIndex }) => {
+    const active = screen.panel === panel && (panel !== 'article' || storyIndex === screen.storyIndex);
+    button.setAttribute('aria-current', String(active));
+  });
 }
 
 function renderNews(data) {
@@ -57,8 +88,10 @@ function renderNews(data) {
   }));
   // Start directly with stories once available, then finish each fixed batch.
   if (screens.some((screen) => screen.panel === 'article')) return;
-  screens = DashboardEdition.createEdition(data.items, newsOffset);
-  document.querySelector('[data-panel=article]').disabled = !data.items.length;
+  rotationItems = data.items.map((item) => ({ ...item }));
+  screens = DashboardEdition.createEdition(rotationItems, newsOffset);
+  current = 0;
+  renderNavigation();
   showPanel(0);
 }
 
@@ -68,15 +101,13 @@ function renderArticle(screen) {
   $('article-source').textContent = `${source}${item.selection ? ` · ${item.selection}` : ''}`;
   $('article-title').textContent = item.title;
   $('article-author').textContent = item.author ? `By ${item.author}` : source;
-  $('article-excerpt').textContent = item.description || `A description is unavailable for this story. Read the original report at ${source}.`;
-  $('article-page').textContent = `${String(screen.index + 1).padStart(2, '0')} / ${String(screen.count).padStart(2, '0')}`;
+  $('article-excerpt').textContent = item.description || 'A description is unavailable for this story.';
   const published = new Date(item.published || NaN);
   $('article-date').textContent = Number.isFinite(published.getTime())
     ? new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: config.timezone }).format(published) : '';
   $('article-date').dateTime = Number.isFinite(published.getTime()) ? published.toISOString() : '';
-  $('article-link').removeAttribute('href');
-  if (item.url.startsWith('https://')) $('article-link').href = item.url;
   const image = $('article-image');
+  const backdrop = $('article-backdrop');
   const hasImage = typeof item.image_url === 'string' && item.image_url.startsWith('https://');
   $('article').classList.toggle('paper-no-image', !hasImage);
   image.onerror = () => {
@@ -85,7 +116,11 @@ function renderArticle(screen) {
   };
   image.alt = item.image_caption || item.title;
   image.removeAttribute('src');
-  if (hasImage) image.src = item.image_url;
+  backdrop.removeAttribute('src');
+  if (hasImage) {
+    backdrop.src = item.image_url;
+    image.src = item.image_url;
+  }
   $('article-caption').textContent = item.image_caption || '';
   $('article-credit').textContent = item.image_credit || '';
   updateStatuses();
@@ -121,22 +156,33 @@ function renderWeather(data) {
   const temperature = node('div', 'temperature', number(now.temperature_2m));
   temperature.append(node('small', '', '°F'));
   temperatures.append(temperature, node('div', 'celsius', `${celsius(now.temperature_2m)}°C`));
+  const hour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: config.timezone }).format(new Date()));
+  const isDay = now.is_day === 0 ? false : now.is_day === 1 ? true : hour >= 7 && hour < 19;
+  const illustration = node('div', 'weather-art');
+  illustration.dataset.kind = WeatherVisual.appearance(now.weather_code, isDay);
+  illustration.setAttribute('role', 'img');
+  illustration.setAttribute('aria-label', `${condition(now.weather_code)}${isDay ? '' : ' at night'}`);
+  illustration.innerHTML = WeatherVisual.icon(now.weather_code, isDay);
   const conditions = node('div', 'conditions');
   conditions.append(node('p', 'condition-label', condition(now.weather_code)));
   const details = node('div', 'weather-detail');
   details.append(node('div', '', `Feels like ${number(now.apparent_temperature)}°F / ${celsius(now.apparent_temperature)}°C`));
   details.append(node('div', '', `Humidity ${number(now.relative_humidity_2m)}% · Wind ${number(now.wind_speed_10m)} mph`));
   conditions.append(details);
-  summary.append(temperatures, conditions);
+  summary.append(temperatures, illustration, conditions);
   const forecast = node('div', 'forecast');
   daily.time.forEach((day, i) => {
     const column = node('div', 'forecast-day');
     const dayName = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${day}T12:00:00Z`));
     column.append(node('div', 'forecast-name', i === 0 ? 'TODAY' : dayName.toUpperCase()));
+    const icon = node('div', 'forecast-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = WeatherVisual.icon(daily.weather_code[i]);
+    column.append(icon);
     const high = node('div', 'forecast-temp', `${number(daily.temperature_2m_max[i])}°`);
     high.append(node('span', '', ` / ${number(daily.temperature_2m_min[i])}°F`));
     column.append(high,
-      node('div', 'forecast-condition', `${celsius(daily.temperature_2m_max[i])}° / ${celsius(daily.temperature_2m_min[i])}°C`),
+      node('div', 'forecast-celsius', `${celsius(daily.temperature_2m_max[i])}° / ${celsius(daily.temperature_2m_min[i])}°C`),
       node('div', 'forecast-condition', condition(daily.weather_code[i])));
     forecast.append(column);
   });
@@ -229,14 +275,16 @@ function showPanel(index) {
   if (index >= screens.length) {
     if (records.news) {
       newsOffset = (newsOffset + Math.min(3, records.news.data.items.length)) % records.news.data.items.length;
-      screens = DashboardEdition.createEdition(records.news.data.items, newsOffset);
+      rotationItems = records.news.data.items.map((item) => ({ ...item }));
+      screens = DashboardEdition.createEdition(rotationItems, newsOffset);
+      current = 0;
+      renderNavigation();
     }
     index = 0;
   }
   current = (index + screens.length) % screens.length;
   const screen = screens[current];
   document.body.dataset.view = screen.panel;
-  document.querySelector('.masthead').inert = screen.panel === 'article';
   document.querySelector('.footer').inert = screen.panel === 'article';
   panels.forEach((name) => {
     const active = name === screen.panel;
@@ -244,7 +292,7 @@ function showPanel(index) {
     $(name).inert = !active;
     $(name).setAttribute('aria-hidden', String(!active));
   });
-  document.querySelectorAll('[data-panel]').forEach((button) => button.setAttribute('aria-current', String(button.dataset.panel === screen.panel)));
+  updateNavigation();
   if (screen.panel === 'article') renderArticle(screen);
   if (screen.panel === 'quote') { refresh('quote'); requestAnimationFrame(fitQuote); }
   history.replaceState(null, '', `#${screen.panel}`);
@@ -277,10 +325,6 @@ function updateClock() {
   } catch { $('clock').textContent = now.toLocaleTimeString(); }
 }
 
-document.querySelectorAll('[data-panel]').forEach((button) => button.addEventListener('click', () => {
-  const index = screens.findIndex((screen) => screen.panel === button.dataset.panel);
-  if (index !== -1) showPanel(index);
-}));
 $('pause').addEventListener('click', () => setPaused(!paused));
 $('paper-pause').addEventListener('click', () => setPaused(!paused));
 $('paper-previous').addEventListener('click', () => showPanel(current - 1));
@@ -296,7 +340,6 @@ if (!document.fullscreenEnabled) {
   $('fullscreen').hidden = true;
   $('paper-fullscreen').hidden = true;
 }
-document.querySelector('[data-panel=article]').disabled = true;
 $('fullscreen').addEventListener('click', toggleFullscreen);
 $('paper-fullscreen').addEventListener('click', toggleFullscreen);
 let wasPaused = false;
@@ -366,5 +409,6 @@ function animateProgress() {
   requestAnimationFrame(animateProgress);
 }
 requestAnimationFrame(animateProgress);
+renderNavigation();
 setInterval(updateClock, 1000);
 init();

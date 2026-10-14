@@ -1,5 +1,11 @@
 # TODO
 
+- [x] Rename masthead to The Daily with styled editorial typography.
+- [x] Add blurred photo fill behind uncropped story images.
+- [x] Add one dot per story and replace visible section navigation with dots.
+- [x] Remove app header, article counts/links, and redundant source/collection labels.
+- [x] Add day/night-aware current weather artwork and five forecast icons.
+
 - [x] Add nine requested sources alongside NYT, capped at four stories each.
 - [x] Add publisher labels, interleaving, independent caches, and source health.
 - [x] Support RSS/Atom, CNN preview metadata, and TechCrunch featured photos.

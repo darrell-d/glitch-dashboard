@@ -4,32 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#101815">
-  <title>glitch / dashboard</title>
+  <title>The Daily</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23101815'/%3E%3Ctext x='9' y='29' fill='%23c6f294' font-size='30'%3Eg%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/newspaper.css?v=story-rotation-2">
-  <script src="/edition.js?v=story-rotation-2" defer></script>
-  <script src="/app.js?v=multi-source-3" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=daily-4">
+  <link rel="stylesheet" href="/newspaper.css?v=daily-4">
+  <script src="/edition.js?v=daily-4" defer></script>
+  <script src="/weather.js?v=daily-4" defer></script>
+  <script src="/app.js?v=daily-4" defer></script>
 </head>
 <body data-transition="fade">
-  <header class="masthead">
-    <div class="brand">glitch<span class="brand-slash"> / </span><span class="muted">dashboard</span></div>
-    <div class="clock"><span id="date"></span><time id="clock"></time></div>
-  </header>
-
   <main id="display">
     <section class="panel active" id="news" aria-labelledby="news-heading">
-      <div class="section-heading"><span class="eyebrow">01 / THE BRIEFING</span><span class="source">Your news sources</span></div>
       <h1 id="news-heading">Today's stories.</h1>
       <div id="headlines"><p class="placeholder">Gathering the latest stories…</p></div>
-      <div class="panel-bottom"><span>FOUR STORIES PER SOURCE</span><span id="news-status" role="status">Connecting</span></div>
+      <div class="panel-bottom"><span id="news-status" role="status">Connecting</span></div>
     </section>
 
     <section class="panel newspaper" id="article" aria-labelledby="article-title" inert aria-hidden="true">
-      <figure id="article-figure" class="paper-figure"><img id="article-image" alt=""></figure>
+      <figure id="article-figure" class="paper-figure"><img id="article-backdrop" class="paper-backdrop" alt="" aria-hidden="true"><img id="article-image" class="paper-foreground" alt=""></figure>
       <div class="paper-column">
-        <div class="paper-masthead"><span class="paper-name">The Glitch Gazette</span></div>
-        <div class="paper-dateline"><time id="article-date"></time><span id="article-page"></span></div>
+        <div class="paper-masthead"><span class="paper-name">The Daily</span></div>
+        <div class="paper-dateline"><time id="article-date"></time></div>
         <div class="paper-story">
           <span class="paper-kicker" id="article-source"></span>
           <h1 id="article-title" class="paper-headline">Today's dispatches</h1>
@@ -37,28 +32,28 @@
           <div class="paper-byline" id="article-author"></div>
         </div>
         <div class="paper-photo-note"><span id="article-caption"></span><span id="article-credit"></span></div>
-        <div class="paper-bottom"><a id="article-link" target="_blank" rel="noopener">Read the full story ↗</a><span id="article-status" role="status"></span></div>
+        <nav id="paper-screen-dots" class="screen-dots" aria-label="Display navigation"></nav>
+        <div class="paper-bottom"><span id="article-status" role="status"></span></div>
         <nav class="paper-controls" aria-label="Story controls"><button id="paper-previous" aria-label="Previous screen">←</button><button id="paper-pause">Pause</button><button id="paper-next" aria-label="Next screen">→</button><button id="paper-fullscreen">Fullscreen</button><button id="paper-settings">Settings</button></nav>
         <div class="paper-progress-track"><div id="article-progress"></div></div>
       </div>
     </section>
 
     <section class="panel" id="weather" aria-labelledby="weather-heading" inert aria-hidden="true">
-      <div class="section-heading"><span class="eyebrow">02 / OUTSIDE</span><span class="source">Open-Meteo</span></div>
-      <h1 id="weather-heading">A little perspective.</h1>
+      <div class="weather-heading-row"><h1 id="weather-heading">Philadelphia</h1><div class="clock"><span id="date"></span><time id="clock"></time></div></div>
       <div id="weather-content" class="weather-content"><p class="placeholder">Checking the sky…</p></div>
-      <div class="panel-bottom"><a href="https://open-meteo.com/" target="_blank" rel="noopener">WEATHER DATA / OPEN-METEO</a><span id="weather-status" role="status">Connecting</span></div>
+      <div class="panel-bottom"><span id="weather-status" role="status">Connecting</span></div>
     </section>
 
     <section class="panel" id="quote" aria-labelledby="quote-heading" inert aria-hidden="true">
-      <div class="section-heading"><span class="eyebrow" id="quote-heading">03 / SOMETHING TO KEEP</span><span class="source">darrelld.com</span></div>
+      <h1 id="quote-heading" class="sr-only">Quote</h1>
       <div class="quote-content"><span class="quote-mark" aria-hidden="true">“</span><blockquote id="quote-text">Finding a thought worth keeping…</blockquote><p id="quote-author" class="quote-author"></p></div>
-      <div class="panel-bottom"><a href="https://darrelld.com/quotes/" target="_blank" rel="noopener">FROM THE QUOTE COLLECTION</a><span id="quote-status" role="status">Connecting</span></div>
+      <div class="panel-bottom"><span id="quote-status" role="status">Connecting</span></div>
     </section>
   </main>
 
   <footer class="footer">
-    <div class="panel-nav" aria-label="Dashboard panels"><button data-panel="article" aria-label="Stories">01 <span>Stories</span></button><button data-panel="weather" aria-label="Weather">02 <span>Weather</span></button><button data-panel="quote" aria-label="Quote">03 <span>A thought</span></button></div>
+    <nav id="screen-dots" class="screen-dots" aria-label="Display navigation"></nav>
     <div class="controls"><button id="pause" aria-label="Pause rotation">Pause</button><button id="fullscreen">Fullscreen</button><button id="settings">Settings</button></div>
     <span id="countdown" class="countdown" aria-label="Seconds until next panel">30s</span>
     <div class="progress-track"><div id="progress"></div></div>
@@ -71,6 +66,7 @@
       <label for="transition">Transition</label><select id="transition"><option value="fade">Soft fade</option><option value="slide">Slide upward</option><option value="none">Instant</option></select>
       <p>Saved on this browser. Weather location is configured on the server.</p>
       <details class="source-settings"><summary>News sources</summary><ul id="source-status-list"></ul></details>
+      <p class="data-credit">Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
       <div class="dialog-actions"><button value="cancel" formnovalidate>Cancel</button><button value="save" class="primary">Save settings</button></div>
     </form>
   </dialog>
