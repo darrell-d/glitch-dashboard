@@ -1,5 +1,11 @@
 # TODO
 
+- [x] Add nine requested sources alongside NYT, capped at four stories each.
+- [x] Add publisher labels, interleaving, independent caches, and source health.
+- [x] Support RSS/Atom, CNN preview metadata, and TechCrunch featured photos.
+- [x] Verify all ten publisher adapters live and save a reusable diagnostic.
+- [ ] Refine WSJ's initial World News selection if broader coverage is wanted.
+
 - [x] Remove headline overview from rotation and start directly with stories.
 - [x] Animate countdown progress per display frame with pause/resume coverage.
 

@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/newspaper.css?v=story-rotation-2">
   <script src="/edition.js?v=story-rotation-2" defer></script>
-  <script src="/app.js?v=story-rotation-2" defer></script>
+  <script src="/app.js?v=multi-source-3" defer></script>
 </head>
 <body data-transition="fade">
   <header class="masthead">
@@ -19,10 +19,10 @@
 
   <main id="display">
     <section class="panel active" id="news" aria-labelledby="news-heading">
-      <div class="section-heading"><span class="eyebrow">01 / THE BRIEFING</span><span class="source">The New York Times</span></div>
+      <div class="section-heading"><span class="eyebrow">01 / THE BRIEFING</span><span class="source">Your news sources</span></div>
       <h1 id="news-heading">Today's stories.</h1>
       <div id="headlines"><p class="placeholder">Gathering the latest stories…</p></div>
-      <div class="panel-bottom"><span>NYT / TOP STORIES</span><span id="news-status" role="status">Connecting</span></div>
+      <div class="panel-bottom"><span>FOUR STORIES PER SOURCE</span><span id="news-status" role="status">Connecting</span></div>
     </section>
 
     <section class="panel newspaper" id="article" aria-labelledby="article-title" inert aria-hidden="true">
@@ -31,7 +31,7 @@
         <div class="paper-masthead"><span class="paper-name">The Glitch Gazette</span></div>
         <div class="paper-dateline"><time id="article-date"></time><span id="article-page"></span></div>
         <div class="paper-story">
-          <span class="paper-kicker">THE NEW YORK TIMES</span>
+          <span class="paper-kicker" id="article-source"></span>
           <h1 id="article-title" class="paper-headline">Today's dispatches</h1>
           <p id="article-excerpt" class="paper-description"></p>
           <div class="paper-byline" id="article-author"></div>
@@ -70,6 +70,7 @@
       <label for="duration">Seconds per panel</label><input id="duration" type="number" min="5" max="600" value="30" required>
       <label for="transition">Transition</label><select id="transition"><option value="fade">Soft fade</option><option value="slide">Slide upward</option><option value="none">Instant</option></select>
       <p>Saved on this browser. Weather location is configured on the server.</p>
+      <details class="source-settings"><summary>News sources</summary><ul id="source-status-list"></ul></details>
       <div class="dialog-actions"><button value="cancel" formnovalidate>Cancel</button><button value="save" class="primary">Save settings</button></div>
     </form>
   </dialog>

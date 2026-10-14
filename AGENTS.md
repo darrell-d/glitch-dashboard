@@ -1,7 +1,8 @@
 # glitch-dashboard
 
 Personal monitor dashboard: Python standard-library server plus buildless HTML,
-CSS, and JavaScript. `make run`, `make test`, and `make check` are entrypoints.
+CSS, and JavaScript. curl is required for POLITICO (included in Docker).
+`make run`, `make test`, and `make check` are entrypoints.
 
 - Read `README.md`, `TODO.md`, and local `agent-notes/` before implementing.
 - Keep the experience full-viewport and readable at a distance.
@@ -22,6 +23,14 @@ CSS, and JavaScript. `make run`, `make test`, and `make check` are entrypoints.
 - Confirmed defaults: Philadelphia, Fahrenheit first with Celsius alongside,
   NYT homepage headlines, and 30-second panel rotation.
 - Keep source/category expansion easy; detailed news preferences are deferred.
+- `sources.py` configures NYT, CNN, Kotaku, WSJ, The Atlantic, POLITICO, WIRED,
+  Ars Technica, TechCrunch, and The New Yorker. Cap each source at four distinct
+  stories and interleave publishers; label the actual publisher.
+- WSJ uses World News RSS and must be labeled accordingly. CNN uses current Lite
+  links plus short public metadata; never use its stale legacy RSS. TechCrunch
+  uses WordPress excerpts/featured media. Do not retrieve article bodies.
+- Keep source caches and failures independent. Live adapter checks use
+  `../tooling/glitch-dashboard/check-news-sources.py`; see its tooling catalog.
 - News should keep one representative per inferred homepage story group, rather
   than one per editorial section. `news.py` filters companions in feed order;
   preserve tests for unrelated stories sharing a politician or broad subject.

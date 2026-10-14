@@ -51,6 +51,10 @@ function condition(code) {
 }
 
 function renderNews(data) {
+  $('source-status-list').replaceChildren(...(data.sources || []).map((source) => {
+    const state = !source.available ? 'unavailable' : `${source.count} stories${source.stale ? ' · cached' : ''}`;
+    return node('li', '', `${source.name}${source.selection ? ` · ${source.selection}` : ''}: ${state}`);
+  }));
   // Start directly with stories once available, then finish each fixed batch.
   if (screens.some((screen) => screen.panel === 'article')) return;
   screens = DashboardEdition.createEdition(data.items, newsOffset);
@@ -60,9 +64,11 @@ function renderNews(data) {
 
 function renderArticle(screen) {
   const item = screen.item;
+  const source = item.source || 'The New York Times';
+  $('article-source').textContent = `${source}${item.selection ? ` · ${item.selection}` : ''}`;
   $('article-title').textContent = item.title;
-  $('article-author').textContent = item.author ? `By ${item.author}` : 'The New York Times';
-  $('article-excerpt').textContent = item.description || 'No description was supplied for this story. Read the original report at The New York Times.';
+  $('article-author').textContent = item.author ? `By ${item.author}` : source;
+  $('article-excerpt').textContent = item.description || `A description is unavailable for this story. Read the original report at ${source}.`;
   $('article-page').textContent = `${String(screen.index + 1).padStart(2, '0')} / ${String(screen.count).padStart(2, '0')}`;
   const published = new Date(item.published || NaN);
   $('article-date').textContent = Number.isFinite(published.getTime())
@@ -82,6 +88,7 @@ function renderArticle(screen) {
   if (hasImage) image.src = item.image_url;
   $('article-caption').textContent = item.image_caption || '';
   $('article-credit').textContent = item.image_credit || '';
+  updateStatuses();
   requestAnimationFrame(fitArticle);
 }
 
@@ -155,7 +162,7 @@ const renderers = { news: renderNews, weather: renderWeather, quote: renderQuote
 
 async function request(path) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 15000);
+  const timer = setTimeout(() => controller.abort(), path === '/api/news' ? 25000 : 15000);
   try {
     const response = await fetch(path, { signal: controller.signal, cache: 'no-store' });
     if (!response.ok) throw new Error('Feed unavailable');
@@ -173,7 +180,7 @@ async function refresh(name) {
     if (name === 'weather') value.configKey = JSON.stringify(config);
     renderers[name](value.data);
     records[name] = value;
-    store(`glitch-feed-${name}`, value);
+    store(name === 'news' ? 'glitch-feed-news-v2' : `glitch-feed-${name}`, value);
     if (name === 'news') openPendingArticle();
   } catch {
     if (records[name]) records[name].stale = true;
@@ -200,6 +207,13 @@ function updateStatuses() {
     $(`${name}-status`).textContent = `${stale ? 'Cached · ' : ''}Updated ${age < 1 ? 'just now' : `${age}m ago`}`;
   }
   $('article-status').textContent = $('news-status').textContent;
+  const item = screens[current].item;
+  if (item && item.source_updated_at) {
+    const age = Math.max(0, Math.floor((Date.now() - Date.parse(item.source_updated_at)) / 60000));
+    const health = records.news?.data.sources?.find((source) => source.id === item.source_id);
+    const stale = item.source_stale || health?.stale || records.news?.stale || age >= 15;
+    $('article-status').textContent = `${stale ? 'Cached · ' : ''}Updated ${age < 1 ? 'just now' : `${age}m ago`}`;
+  }
 }
 
 function resetTimer() { elapsed = 0; started = performance.now(); }
@@ -330,7 +344,7 @@ async function init() {
   try { config = await request('/api/config'); } catch { /* Keep known initial defaults. */ }
   updateClock();
   for (const name of names) {
-    const cached = readStored(`glitch-feed-${name}`);
+    const cached = readStored(name === 'news' ? 'glitch-feed-news-v2' : `glitch-feed-${name}`);
     // Weather cache belongs to a specific location/configuration.
     const configKey = JSON.stringify(config);
     if (cached && cached.data && cached.updated_at && (name !== 'weather' || cached.configKey === configKey)) {

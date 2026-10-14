@@ -4,7 +4,8 @@ A rotating, full-viewport dashboard for a dedicated monitor.
 
 ## Run
 
-Requires Python 3.11 or newer. No Python packages or frontend build required.
+Requires Python 3.11 or newer and curl (for POLITICO's public feed).
+No third-party Python packages or frontend build required. Docker includes curl.
 
 ```sh
 make run
@@ -20,15 +21,15 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
 
 ## Panels
 
-- **Stories:** New York Times homepage RSS, shown individually in a warm
-  newspaper layout. Related companions are filtered out, preserving the first
-  article in NYT's feed order, with up to 24 selected stories. Each page has a bold serif
+- **Stories:** Four distinct stories per publisher from the ten sources below,
+  shown individually in a warm newspaper layout. Related companions are filtered
+  within each source, preserving publisher feed order. Each page has a bold serif
   headline, short description, byline, publication date, and photo credit. On a
   16:9 monitor, the square photo fills the entire viewport height, uncropped and
   in full color, with a cream newspaper column beside it. The dashboard header
   and footer do not consume photo space. Portrait layouts stack the photo and
-  story. A link opens the original NYT article. The RSS source does not supply
-  full article bodies; descriptions are displayed as supplied, with no invented
+  story. Non-square photos fit the same image area without cropping. A link opens
+  the original publisher's article. Only short descriptions are displayed, with no invented
   article text or generated bullet summaries. Stories with missing or failed
   images use a text-focused layout.
 - **Weather:** Philadelphia current conditions, Fahrenheit first with Celsius
@@ -50,6 +51,44 @@ pause, fullscreen, and settings. Keyboard arrows also work when a story button
 has focus. Static assets revalidate on refresh to pick up local changes.
 The countdown bar animates with display frames for smooth movement; pause and
 resume preserve elapsed time. Feed polling is independent of the animation.
+
+## News sources
+
+| Publisher | Selection |
+| --- | --- |
+| The New York Times | Homepage RSS |
+| CNN | CNN Lite headlines and public article photo/description metadata |
+| Kotaku | Main RSS |
+| The Wall Street Journal | World News RSS, labeled in the display |
+| The Atlantic | All-content Atom feed |
+| POLITICO | Politico Picks RSS |
+| WIRED | Main RSS |
+| Ars Technica | Main RSS |
+| TechCrunch | Public WordPress API with excerpts and featured photos |
+| The New Yorker | Everything RSS |
+
+"Top four" means the first four distinct stories in publisher feed/endpoint order,
+which may differ from homepage placement. The related-story filter runs before
+the four-story limit. Fewer are shown if there are insufficient distinct stories.
+Publishers are interleaved by rank: each first story, then each second story, up
+to 40 total. Cross-publisher coverage is retained to preserve four per source.
+Weather and quote remain between batches of three stories.
+
+`sources.py` configures the endpoints. CNN's legacy RSS contains old 2023 stories
+and is not used. WSJ's automated homepage access is blocked, so World News is
+the initial selection. Only public previews are used; no article bodies or
+paywall bypass. Each publisher has an independent ten-minute cache and failure
+state. **Settings → News sources** shows counts, cached status, and availability.
+Story freshness labels reflect their source. Initial news loading can take up
+to 25 seconds; weather and quotes load independently. NYT-only browser news
+caches are discarded on upgrade.
+
+All ten adapters were checked live with four stories, photos, and descriptions
+each. The reusable check is cataloged in `../tooling/glitch-dashboard/TOOLS.md`:
+
+```sh
+python3 ../tooling/glitch-dashboard/check-news-sources.py --live
+```
 
 The confirmed `_glitch` routes also include `/quote/json` (daily),
 `/quote/json/reminder/random` (reminder-enabled quotes), and equivalent `/quotes/`
@@ -76,7 +115,7 @@ TF-IDF/cosine similarity over titles and descriptions, plus headline word overla
 and corroborating NYT subject/person tags. It selects one representative per
 **inferred homepage story group**, not one per editorial section (World, US,
 etc.). Broad categories or a shared politician alone do not collapse stories.
-Filtering happens before the 24-story limit and never pads a short list with
+Filtering happens before each source's four-story limit and never pads a short list with
 related companions. Each feed refresh recalculates the selection.
 
 This is a heuristic: differently worded coverage without useful tags can escape

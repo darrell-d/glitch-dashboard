@@ -4,26 +4,33 @@ import argparse
 import json
 import math
 import os
+import subprocess
 import threading
 import time
 import urllib.parse
 import urllib.request
-import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from news import plain_text, select_stories
+from sources import SOURCES, load_source, parse_news
 
 ROOT = Path(__file__).parent
-NYT_URL = "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
 QUOTE_URL = "https://darrelld.com/quote/json/random"
-MEDIA_NS = {"media": "http://search.yahoo.com/mrss/"}
 
 
 def fetch(url):
+    if url == "https://www.politico.com/rss/politicopicks.xml":
+        # This public feed accepts the installed curl transport but rejects urllib.
+        data = subprocess.run(["curl", "--fail", "--silent", "--show-error", "--location",
+                               "--proto", "=https", "--proto-redir", "=https",
+                               "--max-time", "8", "--max-filesize", "2000000", url],
+                              capture_output=True, check=True, timeout=10).stdout
+        if len(data) > 2_000_000:
+            raise ValueError("Feed exceeds size limit")
+        return data
     request = urllib.request.Request(url, headers={"User-Agent": "glitch-dashboard/0.1"})
     with urllib.request.urlopen(request, timeout=8) as response:
         data = response.read(2_000_001)
@@ -32,36 +39,20 @@ def fetch(url):
     return data
 
 
-def parse_news(raw):
-    root = ET.fromstring(raw)
-    items = []
-    for item in root.findall("./channel/item"):
-        title = (item.findtext("title") or "").strip()
-        link = (item.findtext("link") or "").strip()
-        if title and urllib.parse.urlparse(link).scheme == "https":
-            description = plain_text(item.findtext("description") or "")
-            image = item.find("media:content", MEDIA_NS)
-            image_url = image.get("url", "") if image is not None else ""
-            if urllib.parse.urlparse(image_url).scheme != "https":
-                image_url = ""
-            categories = []
-            for category in item.findall("category"):
-                value = (category.text or "").strip()
-                if value:
-                    kind = category.get("domain", "").rstrip("/").rsplit("/", 1)[-1]
-                    categories.append((kind, value.casefold()))
-            items.append({"title": title, "url": link, "published": item.findtext("pubDate"),
-                          "description": description, "categories": categories,
-                          "author": plain_text(item.findtext("{http://purl.org/dc/elements/1.1/}creator") or ""),
-                          "image_url": image_url,
-                          "image_caption": plain_text(item.findtext("media:description", "", MEDIA_NS)),
-                          "image_credit": plain_text(item.findtext("media:credit", "", MEDIA_NS))})
-    if not items:
-        raise ValueError("No headlines in feed")
-    selected = select_stories(items)[:24]
-    return {"source": "The New York Times", "items": [
-        {key: value for key, value in item.items() if key != "categories"} for item in selected
-    ]}
+def fetch_head(url):
+    request = urllib.request.Request(url, headers={"User-Agent": "glitch-dashboard/0.1"})
+    with urllib.request.urlopen(request, timeout=8) as response:
+        data = b""
+        # CNN embeds substantial scripts before its public social metadata.
+        # Stop after the useful tags rather than downloading the article body.
+        while len(data) < 1_000_000:
+            chunk = response.read(min(128_000, 1_000_000 - len(data)))
+            if not chunk:
+                break
+            data += chunk
+            if b"og:image" in data and b"og:description" in data:
+                break
+        return data
 
 
 def parse_quote(raw):
@@ -121,10 +112,33 @@ class Feed:
             }
 
 
+class NewsFeed:
+    def __init__(self, feeds, sources=SOURCES):
+        self.feeds, self.sources = feeds, sources
+
+    def get(self):
+        with ThreadPoolExecutor(max_workers=len(self.sources)) as pool:
+            results = list(pool.map(lambda source: self.feeds[source["id"]].get(), self.sources))
+        statuses, groups = [], []
+        for source, result in zip(self.sources, results):
+            items = result["data"]["items"] if result["data"] else []
+            statuses.append({"id": source["id"], "name": source["name"], "selection": source.get("selection", ""),
+                             "count": len(items), "stale": result["stale"], "updated_at": result["updated_at"],
+                             "available": bool(items)})
+            groups.append([{**item, "source_updated_at": result["updated_at"], "source_stale": result["stale"]} for item in items])
+        # Interleave publishers so four stories from one outlet never dominate a batch.
+        items = [group[rank] for rank in range(4) for group in groups if rank < len(group)]
+        updated = [result["updated_at"] for result in results if result["updated_at"]]
+        return {"data": {"items": items, "sources": statuses} if items else None,
+                "updated_at": max(updated) if updated else None,
+                "stale": all(not status["available"] or status["stale"] for status in statuses),
+                "error": None if items else "News sources temporarily unavailable"}
+
+
 def make_feeds(config):
     url = weather_url(config["latitude"], config["longitude"], config["timezone"])
     return {
-        "news": Feed(lambda: parse_news(fetch(NYT_URL)), 600),
+        "news": NewsFeed({source["id"]: Feed(partial(load_source, source, fetch, fetch_head), 600) for source in SOURCES}),
         "weather": Feed(lambda: parse_weather(fetch(url)), 600),
         "quote": Feed(lambda: parse_quote(fetch(QUOTE_URL)), 90),
     }

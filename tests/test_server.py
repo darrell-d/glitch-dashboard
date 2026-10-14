@@ -1,8 +1,9 @@
 import json
+import io
 import unittest
 from unittest.mock import Mock, patch
 
-from server import Feed, parse_news, parse_quote, parse_weather, weather_url
+from server import Feed, fetch, fetch_head, parse_news, parse_quote, parse_weather, weather_url
 
 
 class FeedTests(unittest.TestCase):
@@ -36,6 +37,19 @@ class FeedTests(unittest.TestCase):
 
 
 class AdapterTests(unittest.TestCase):
+    def test_cnn_metadata_can_be_after_large_head_scripts(self):
+        raw = b"<head>" + b"x" * 320000 + b'<meta property="og:image" content="https://example.com/a.jpg"><meta property="og:description" content="Brief">' + b"x" * 1_000_000
+        with patch("server.urllib.request.urlopen", return_value=io.BytesIO(raw)):
+            metadata = fetch_head("https://www.cnn.com/report")
+        self.assertIn(b"og:image", metadata)
+        self.assertLess(len(metadata), 1_000_000)
+
+    def test_politico_uses_bounded_public_curl_transport(self):
+        with patch("server.subprocess.run", return_value=Mock(stdout=b"<rss/>")) as run:
+            self.assertEqual(fetch("https://www.politico.com/rss/politicopicks.xml"), b"<rss/>")
+        self.assertIn("--max-filesize", run.call_args.args[0])
+        self.assertEqual(run.call_args.kwargs["timeout"], 10)
+
     def test_rss_entities_and_unsafe_links(self):
         result = parse_news(b'''<rss><channel>
           <item><title>A &amp; B</title><link>https://www.nytimes.com/a</link></item>

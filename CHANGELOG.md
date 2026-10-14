@@ -4,6 +4,10 @@
 
 ### Features
 
+- Add CNN, Kotaku, WSJ World News, The Atlantic, POLITICO, WIRED, Ars Technica,
+  TechCrunch, and The New Yorker alongside NYT, selecting four stories each.
+- Interleave publishers, label stories by source, and show source health in
+  Settings; support RSS, Atom, featured media, and public CNN preview metadata.
 - Start directly with individual news stories and remove the headline list from
   rotation and navigation.
 - Fill story screens with a full-height uncropped square photo beside a cream
@@ -38,9 +42,13 @@
 
 ### Performance
 
+- Cache publishers independently and fetch them concurrently, retaining healthy
+  publishers when another source fails.
+
 - Animate countdown progress with requestAnimationFrame instead of 250ms steps,
   while changing the numeric countdown only when its displayed value changes.
 
 - Cache news/weather for ten minutes and quotes for 90 seconds; retain last good
   data during outages with visible cached status and retry cooldown.
-- Keep the frontend buildless and the Python server dependency-free.
+- Keep the frontend buildless and avoid third-party Python packages; use curl
+  for POLITICO public feed compatibility.

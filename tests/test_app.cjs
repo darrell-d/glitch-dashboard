@@ -42,6 +42,7 @@ async function app(hash = '') {
   let now = 0;
   const frames = [];
   const items = Array.from({ length: 3 }, (_, i) => ({ title: `Story ${i}`, description: `Description ${i}`,
+    source: ['CNN', 'WIRED', 'Kotaku'][i], source_updated_at: new Date().toISOString(), source_stale: i === 0,
     url: `https://example.com/${i}`, image_url: `https://example.com/${i}.jpg` }));
   const document = {
     body: new Element('BODY'), fullscreenEnabled: false,
@@ -84,6 +85,11 @@ test('direct story URL opens a photo page once feed data is available', async ()
   assert.equal(screen.elements.article.classList.contains('active'), true);
   assert.equal(screen.elements['article-image'].src, 'https://example.com/0.jpg');
   assert.equal(screen.elements['article-excerpt'].textContent, 'Description 0');
+  assert.equal(screen.elements['article-source'].textContent, 'CNN');
+  assert.match(screen.elements['article-status'].textContent, /^Cached/);
+  screen.elements['paper-next'].click();
+  assert.equal(screen.elements['article-source'].textContent, 'WIRED');
+  assert.doesNotMatch(screen.elements['article-status'].textContent, /^Cached/);
 });
 
 test('story controls reach weather and return to stories without a headline list', async () => {
