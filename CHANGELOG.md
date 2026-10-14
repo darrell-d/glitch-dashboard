@@ -13,6 +13,8 @@
   remove the detached quotation-mark glyph.
 - Add condition-driven central weather artwork and forecast icons, including
   day/night-aware clear skies; move weather attribution into Settings.
+- Add a compact moon-phase disc, phase name, and illuminated percentage to weather,
+  calculated locally without another runtime API dependency.
 - Remove weather provider/Outside labels and quote collection/source links.
 - Add CNN, Kotaku, WSJ World News, The Atlantic, POLITICO, WIRED, Ars Technica,
   TechCrunch, and The New Yorker alongside NYT, selecting four stories each.

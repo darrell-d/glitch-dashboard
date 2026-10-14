@@ -38,6 +38,8 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   alongside; feels-like temperature and a five-day forecast in both units. A
   large condition illustration fills the center, with day/night-aware sun/moon,
   clouds, rain, fog, snow, or storms. Each forecast day has a simpler icon.
+  A secondary lunar readout shows the current moon phase and illuminated
+  percentage using a local astronomical calculation.
   Local SVG assets need no image service or extra runtime library. Data provider
   attribution is in Settings instead of on the weather screen.
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`, set in

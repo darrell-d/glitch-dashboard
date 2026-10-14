@@ -5,6 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { createEdition } = require('../public/edition.js');
 const WeatherVisual = require('../public/weather.js');
+const MoonPhase = require('../public/moon.js');
 
 // Exercise the actual app's navigation/timer with a minimal DOM, without a browser.
 class Element {
@@ -48,7 +49,7 @@ async function app(hash = '', { storyCount = 3, weather = null } = {}) {
     querySelector: (selector) => extras[selector],
     addEventListener: (event, callback) => { listeners[event] = callback; },
   };
-  const context = vm.createContext({ document, location, DashboardEdition: { createEdition }, WeatherVisual,
+  const context = vm.createContext({ document, location, DashboardEdition: { createEdition }, WeatherVisual, MoonPhase,
     window: { addEventListener() {} }, history: { replaceState: (_, __, hash) => { location.hash = hash; } },
     localStorage: { getItem: () => null, setItem() {} }, performance: { now: () => now },
     getComputedStyle: () => ({ fontSize: '32px' }), requestAnimationFrame: (callback) => frames.push(callback),
@@ -102,6 +103,9 @@ test('weather renders night-aware central imagery and five forecast icons', asyn
   assert.match(summary.children[1].attributes['aria-label'], /night/);
   assert.equal(forecast.children.length, 5);
   assert.ok(forecast.children.every((day) => day.children.some((child) => child.className === 'forecast-icon')));
+  const moon = summary.children[2].children[2];
+  assert.equal(moon.className, 'moon-phase');
+  assert.match(moon.attributes['aria-label'], /^Moon: /);
 });
 
 test('display markup has no app header, story count, article link, or quote collection link', () => {

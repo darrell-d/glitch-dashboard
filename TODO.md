@@ -6,6 +6,7 @@
 - [x] Restyle quotes as an editorial rule lockup without a quotation-mark glyph.
 - [x] Remove app header, article counts/links, and redundant source/collection labels.
 - [x] Add day/night-aware current weather artwork and five forecast icons.
+- [x] Add a secondary moon-phase and illumination readout to weather.
 
 - [x] Add nine requested sources alongside NYT, capped at four stories each.
 - [x] Add publisher labels, interleaving, independent caches, and source health.

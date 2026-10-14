@@ -125,7 +125,16 @@ function renderWeather(data) {
   const details = node('div', 'weather-detail');
   details.append(node('div', '', `Feels like ${number(now.apparent_temperature)}°F / ${celsius(now.apparent_temperature)}°C`));
   details.append(node('div', '', `Humidity ${number(now.relative_humidity_2m)}% · Wind ${number(now.wind_speed_10m)} mph`));
-  conditions.append(details);
+  const moon = MoonPhase.info(new Date());
+  const lunar = node('div', 'moon-phase');
+  lunar.setAttribute('aria-label', `Moon: ${moon.name}, ${moon.illumination}% illuminated`);
+  const disc = node('span', 'moon-disc');
+  disc.dataset.phase = moon.key;
+  disc.setAttribute('aria-hidden', 'true');
+  const lunarText = node('div');
+  lunarText.append(node('div', 'moon-name', moon.name), node('div', 'moon-illumination', `${moon.illumination}% illuminated`));
+  lunar.append(disc, lunarText);
+  conditions.append(details, lunar);
   summary.append(temperatures, illustration, conditions);
   const forecast = node('div', 'forecast');
   daily.time.forEach((day, i) => {

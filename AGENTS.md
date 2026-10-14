@@ -24,6 +24,8 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   Keep automatic rotation, keyboard navigation, and display controls.
 - Weather uses local SVG artwork based on WMO condition and `is_day`, plus five
   forecast icons. No provider/Outside labels on the screen; attribution in Settings.
+- Weather also shows a secondary locally calculated moon phase and illumination;
+  keep it visually subordinate to current temperature and conditions.
 - Quote pages use the editorial-rule layout without a quotation-mark glyph,
   collection labels, or darrelld.com links.
 - Display loading, unavailable, and stale states honestly; do not present sample
