@@ -51,27 +51,11 @@ function condition(code) {
 }
 
 function renderNews(data) {
-  // Finish the current edition before replacing its article pages with new data.
-  if (screens[current].panel !== 'news') return;
+  // Start directly with stories once available, then finish each fixed batch.
+  if (screens.some((screen) => screen.panel === 'article')) return;
   screens = DashboardEdition.createEdition(data.items, newsOffset);
-  renderOverview();
-}
-
-function renderOverview() {
-  const list = $('headlines');
-  list.replaceChildren();
-  const items = screens[0].items;
-  items.forEach((item, i) => {
-    const row = node('article', 'headline');
-    row.append(node('span', 'headline-number', String(i + 1).padStart(2, '0')));
-    const button = node('button', '', item.title);
-    button.type = 'button';
-    button.setAttribute('aria-label', `Open newspaper view: ${item.title}`);
-    button.addEventListener('click', () => showPanel(i + 1));
-    row.append(button);
-    list.append(row);
-  });
-  document.querySelector('[data-panel=article]').disabled = !items.length;
+  document.querySelector('[data-panel=article]').disabled = !data.items.length;
+  showPanel(0);
 }
 
 function renderArticle(screen) {
@@ -232,7 +216,6 @@ function showPanel(index) {
     if (records.news) {
       newsOffset = (newsOffset + Math.min(3, records.news.data.items.length)) % records.news.data.items.length;
       screens = DashboardEdition.createEdition(records.news.data.items, newsOffset);
-      renderOverview();
     }
     index = 0;
   }
@@ -266,7 +249,8 @@ function tick() {
   const total = options.duration * 1000;
   let used = elapsed + (paused ? 0 : performance.now() - started);
   if (used >= total && !paused) { showPanel(current + 1); used = 0; }
-  $('countdown').textContent = paused ? 'Ⅱ' : `${Math.max(0, Math.ceil((total - used) / 1000))}s`;
+  const countdown = paused ? 'Ⅱ' : `${Math.max(0, Math.ceil((total - used) / 1000))}s`;
+  if ($('countdown').textContent !== countdown) $('countdown').textContent = countdown;
   $('progress').style.transform = `scaleX(${Math.min(1, used / total)})`;
   $('article-progress').style.transform = $('progress').style.transform;
 }
@@ -285,7 +269,6 @@ document.querySelectorAll('[data-panel]').forEach((button) => button.addEventLis
 }));
 $('pause').addEventListener('click', () => setPaused(!paused));
 $('paper-pause').addEventListener('click', () => setPaused(!paused));
-$('paper-back').addEventListener('click', () => showPanel(0));
 $('paper-previous').addEventListener('click', () => showPanel(current - 1));
 $('paper-next').addEventListener('click', () => showPanel(current + 1));
 $('paper-settings').addEventListener('click', () => $('settings').click());
@@ -364,6 +347,10 @@ async function init() {
   setInterval(() => refresh('quote'), 90000);
   setInterval(updateStatuses, 10000);
 }
-setInterval(tick, 250);
+function animateProgress() {
+  tick();
+  requestAnimationFrame(animateProgress);
+}
+requestAnimationFrame(animateProgress);
 setInterval(updateClock, 1000);
 init();

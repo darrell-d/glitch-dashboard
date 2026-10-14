@@ -32,7 +32,7 @@ async function app(hash = '') {
   const markup = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
   const elements = Object.fromEntries([...markup.matchAll(/id="([^"]+)"/g)].map((match) => [match[1], new Element()]));
   const extras = { '.masthead': new Element(), '.footer': new Element(), '.paper-story': new Element() };
-  const navigation = ['news', 'article', 'weather', 'quote'].map((panel) => {
+  const navigation = ['article', 'weather', 'quote'].map((panel) => {
     const button = new Element('BUTTON');
     button.dataset.panel = panel;
     return button;
@@ -40,6 +40,7 @@ async function app(hash = '') {
   const listeners = {};
   const location = { hash };
   let now = 0;
+  const frames = [];
   const items = Array.from({ length: 3 }, (_, i) => ({ title: `Story ${i}`, description: `Description ${i}`,
     url: `https://example.com/${i}`, image_url: `https://example.com/${i}.jpg` }));
   const document = {
@@ -53,7 +54,7 @@ async function app(hash = '') {
   const context = vm.createContext({ document, location, DashboardEdition: { createEdition },
     window: { addEventListener() {} }, history: { replaceState: (_, __, hash) => { location.hash = hash; } },
     localStorage: { getItem: () => null, setItem() {} }, performance: { now: () => now },
-    getComputedStyle: () => ({ fontSize: '32px' }), requestAnimationFrame: (callback) => callback(),
+    getComputedStyle: () => ({ fontSize: '32px' }), requestAnimationFrame: (callback) => frames.push(callback),
     setInterval() {}, setTimeout() {}, clearTimeout() {}, AbortController,
     fetch: async (url) => ({ ok: true, json: async () => {
       if (url === '/api/config') return { location: 'Philadelphia', timezone: 'America/New_York' };
@@ -64,14 +65,16 @@ async function app(hash = '') {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
   await new Promise(setImmediate);
   return { elements, extras, location, listeners, navigation,
-    run: (code) => vm.runInContext(code, context), advance: (milliseconds) => { now += milliseconds; vm.runInContext('tick()', context); } };
+    run: (code) => vm.runInContext(code, context), advance: (milliseconds) => { now += milliseconds; vm.runInContext('tick()', context); },
+    frame: (milliseconds) => { now += milliseconds; const pending = frames.splice(0); pending.forEach((callback) => callback()); } };
 }
 
-test('automatic rotation actually activates the first article after the overview', async () => {
+test('stories appear immediately and automatic rotation advances to the next story', async () => {
   const screen = await app();
+  assert.equal(screen.elements['article-title'].textContent, 'Story 0');
   screen.advance(31000);
   assert.equal(screen.elements.article.classList.contains('active'), true);
-  assert.equal(screen.elements['article-title'].textContent, 'Story 0');
+  assert.equal(screen.elements['article-title'].textContent, 'Story 1');
   assert.equal(screen.extras['.footer'].inert, true);
   assert.equal(screen.location.hash, '#article');
 });
@@ -83,15 +86,33 @@ test('direct story URL opens a photo page once feed data is available', async ()
   assert.equal(screen.elements['article-excerpt'].textContent, 'Description 0');
 });
 
-test('headline click and story controls navigate through the actual story screens', async () => {
+test('story controls reach weather and return to stories without a headline list', async () => {
   const screen = await app();
-  screen.elements.headlines.children[1].children[1].click();
+  screen.elements['paper-next'].click();
   assert.equal(screen.elements['article-title'].textContent, 'Story 1');
   screen.elements['paper-next'].click();
   assert.equal(screen.elements['article-title'].textContent, 'Story 2');
-  screen.elements['paper-back'].click();
-  assert.equal(screen.elements.news.classList.contains('active'), true);
+  screen.elements['paper-next'].click();
+  assert.equal(screen.elements.weather.classList.contains('active'), true);
   assert.equal(screen.extras['.footer'].inert, false);
+  screen.navigation.find((button) => button.dataset.panel === 'article').click();
+  assert.equal(screen.elements['article-title'].textContent, 'Story 0');
+});
+
+test('progress advances on animation frames between seconds, freezes on pause, and resumes', async () => {
+  const screen = await app();
+  screen.frame(16);
+  const first = screen.elements['article-progress'].style.transform;
+  screen.frame(16);
+  const second = screen.elements['article-progress'].style.transform;
+  assert.notEqual(first, second);
+  assert.equal(second, screen.elements.progress.style.transform);
+  screen.elements['paper-pause'].click();
+  screen.frame(1000);
+  assert.equal(screen.elements['article-progress'].style.transform, second);
+  screen.elements['paper-pause'].click();
+  screen.frame(16);
+  assert.notEqual(screen.elements['article-progress'].style.transform, second);
 });
 
 test('keyboard arrows work after focusing story buttons and an image failure keeps the story visible', async () => {

@@ -7,9 +7,9 @@
   <title>glitch / dashboard</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23101815'/%3E%3Ctext x='9' y='29' fill='%23c6f294' font-size='30'%3Eg%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/newspaper.css?v=photo-edition-1">
-  <script src="/edition.js" defer></script>
-  <script src="/app.js?v=photo-edition-1" defer></script>
+  <link rel="stylesheet" href="/newspaper.css?v=story-rotation-2">
+  <script src="/edition.js?v=story-rotation-2" defer></script>
+  <script src="/app.js?v=story-rotation-2" defer></script>
 </head>
 <body data-transition="fade">
   <header class="masthead">
@@ -20,8 +20,8 @@
   <main id="display">
     <section class="panel active" id="news" aria-labelledby="news-heading">
       <div class="section-heading"><span class="eyebrow">01 / THE BRIEFING</span><span class="source">The New York Times</span></div>
-      <h1 id="news-heading">A world in motion.</h1>
-      <div id="headlines" class="headlines"><p class="placeholder">Gathering the latest headlines…</p></div>
+      <h1 id="news-heading">Today's stories.</h1>
+      <div id="headlines"><p class="placeholder">Gathering the latest stories…</p></div>
       <div class="panel-bottom"><span>NYT / TOP STORIES</span><span id="news-status" role="status">Connecting</span></div>
     </section>
 
@@ -38,7 +38,7 @@
         </div>
         <div class="paper-photo-note"><span id="article-caption"></span><span id="article-credit"></span></div>
         <div class="paper-bottom"><a id="article-link" target="_blank" rel="noopener">Read the full story ↗</a><span id="article-status" role="status"></span></div>
-        <nav class="paper-controls" aria-label="Story controls"><button id="paper-back">Headlines</button><button id="paper-previous" aria-label="Previous screen">←</button><button id="paper-pause">Pause</button><button id="paper-next" aria-label="Next screen">→</button><button id="paper-fullscreen">Fullscreen</button><button id="paper-settings">Settings</button></nav>
+        <nav class="paper-controls" aria-label="Story controls"><button id="paper-previous" aria-label="Previous screen">←</button><button id="paper-pause">Pause</button><button id="paper-next" aria-label="Next screen">→</button><button id="paper-fullscreen">Fullscreen</button><button id="paper-settings">Settings</button></nav>
         <div class="paper-progress-track"><div id="article-progress"></div></div>
       </div>
     </section>
@@ -58,7 +58,7 @@
   </main>
 
   <footer class="footer">
-    <div class="panel-nav" aria-label="Dashboard panels"><button data-panel="news" aria-label="News" aria-current="true">01 <span>Headlines</span></button><button data-panel="article" aria-label="Newspaper">02 <span>Newspaper</span></button><button data-panel="weather" aria-label="Weather">03 <span>Weather</span></button><button data-panel="quote" aria-label="Quote">04 <span>A thought</span></button></div>
+    <div class="panel-nav" aria-label="Dashboard panels"><button data-panel="article" aria-label="Stories">01 <span>Stories</span></button><button data-panel="weather" aria-label="Weather">02 <span>Weather</span></button><button data-panel="quote" aria-label="Quote">03 <span>A thought</span></button></div>
     <div class="controls"><button id="pause" aria-label="Pause rotation">Pause</button><button id="fullscreen">Fullscreen</button><button id="settings">Settings</button></div>
     <span id="countdown" class="countdown" aria-label="Seconds until next panel">30s</span>
     <div class="progress-track"><div id="progress"></div></div>

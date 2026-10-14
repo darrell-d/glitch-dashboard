@@ -6,8 +6,10 @@ CSS, and JavaScript. `make run`, `make test`, and `make check` are entrypoints.
 - Read `README.md`, `TODO.md`, and local `agent-notes/` before implementing.
 - Keep the experience full-viewport and readable at a distance.
 - Keep rotation timing and transition choice configurable.
-- Rotation: overview of three stories, one newspaper page per story, weather,
-  quote, then the next batch. `public/edition.js` fixes the batch during display.
+- Rotation: three individual story pages, weather, quote, then the next batch.
+  No headline overview/list. `public/edition.js` fixes the batch during display.
+- Use requestAnimationFrame for smooth elapsed-time progress, preserving pause
+  and resume. Keep upstream polling independent of that animation loop.
 - Newspaper pages use RSS headlines, images/captions/credits, and short
   descriptions. Full article bodies are unavailable; the user chose this
   simplified format instead of bullet summaries and article text.

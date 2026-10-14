@@ -20,11 +20,9 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
 
 ## Panels
 
-- **Headlines:** New York Times homepage RSS. Three headlines per news visit,
-  advancing through up to 24 distinct story representatives. Related companions
-  are filtered out, preserving the first article in NYT's feed order. Click a
-  headline to open its newspaper page.
-- **Newspaper:** A warm paper layout for each selected story, with a bold serif
+- **Stories:** New York Times homepage RSS, shown individually in a warm
+  newspaper layout. Related companions are filtered out, preserving the first
+  article in NYT's feed order, with up to 24 selected stories. Each page has a bold serif
   headline, short description, byline, publication date, and photo credit. On a
   16:9 monitor, the square photo fills the entire viewport height, uncropped and
   in full color, with a cream newspaper column beside it. The dashboard header
@@ -38,18 +36,20 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   Data from [Open-Meteo](https://open-meteo.com/).
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`.
 
-Each rotation shows **headline overview → its three newspaper pages → weather →
-quote**, then advances to the next batch of headlines. Every screen uses the
+Each rotation shows **three individual story pages → weather → quote**, then
+advances to the next batch of stories. There is no headline list. Every screen uses the
 configured duration (30 seconds by default). The edition's stories stay together
-while new feed data is held for the next overview, so a refresh does not replace
-an article midway through display. Newspaper navigation jumps to the first story
+while new feed data is held for the next batch, so a refresh does not replace
+an article midway through display. Stories navigation jumps to the first story
 in the current batch; arrow keys step through individual pages.
 
 Open **http://localhost:8080/#article** to jump directly to the first story as
 soon as feed data is available. Story controls appear when hovering or focusing
-the paper column (always visible on touch devices): Headlines, previous/next,
+the paper column (always visible on touch devices): previous/next,
 pause, fullscreen, and settings. Keyboard arrows also work when a story button
 has focus. Static assets revalidate on refresh to pick up local changes.
+The countdown bar animates with display frames for smooth movement; pause and
+resume preserve elapsed time. Feed polling is independent of the animation.
 
 The confirmed `_glitch` routes also include `/quote/json` (daily),
 `/quote/json/reminder/random` (reminder-enabled quotes), and equivalent `/quotes/`

@@ -1,5 +1,8 @@
 # TODO
 
+- [x] Remove headline overview from rotation and start directly with stories.
+- [x] Animate countdown progress per display frame with pause/resume coverage.
+
 - [x] Philadelphia weather; Fahrenheit first, Celsius alongside.
 - [x] NYT homepage headlines for the first version.
 - [x] 30-second rotation with selectable fade, slide, and instant transitions.
