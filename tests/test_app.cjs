@@ -33,11 +33,6 @@ async function app(hash = '', { storyCount = 3, weather = null } = {}) {
   const markup = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
   const elements = Object.fromEntries([...markup.matchAll(/id="([^"]+)"/g)].map((match) => [match[1], new Element()]));
   const extras = { '.footer': new Element(), '.paper-story': new Element() };
-  const navigation = ['article', 'weather', 'quote'].map((panel) => {
-    const button = new Element('BUTTON');
-    button.dataset.panel = panel;
-    return button;
-  });
   const listeners = {};
   const location = { hash };
   let now = 0;
@@ -49,8 +44,8 @@ async function app(hash = '', { storyCount = 3, weather = null } = {}) {
     body: new Element('BODY'), fullscreenEnabled: false,
     getElementById: (id) => { assert.ok(elements[id], `Unknown element ${id}`); return elements[id]; },
     createElement: (tag) => new Element(tag.toUpperCase()),
-    querySelectorAll: () => navigation,
-    querySelector: (selector) => extras[selector] || navigation.find((button) => selector === `[data-panel=${button.dataset.panel}]`),
+    querySelectorAll: () => [],
+    querySelector: (selector) => extras[selector],
     addEventListener: (event, callback) => { listeners[event] = callback; },
   };
   const context = vm.createContext({ document, location, DashboardEdition: { createEdition }, WeatherVisual,
@@ -67,7 +62,7 @@ async function app(hash = '', { storyCount = 3, weather = null } = {}) {
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
   await new Promise(setImmediate);
-  return { elements, extras, location, listeners, navigation: elements['screen-dots'].children,
+  return { elements, extras, location, listeners,
     run: (code) => vm.runInContext(code, context), advance: (milliseconds) => { now += milliseconds; vm.runInContext('tick()', context); },
     frame: (milliseconds) => { now += milliseconds; const pending = frames.splice(0); pending.forEach((callback) => callback()); } };
 }
@@ -95,19 +90,6 @@ test('direct story URL opens a photo page once feed data is available', async ()
   assert.doesNotMatch(screen.elements['article-status'].textContent, /^Cached/);
 });
 
-test('every selected story has an accessible dot and can be opened outside the current batch', async () => {
-  const screen = await app('', { storyCount: 7 });
-  assert.equal(screen.elements['screen-dots'].children.length, 9);
-  assert.equal(screen.elements['paper-screen-dots'].children.length, 9);
-  screen.elements['screen-dots'].children[5].click();
-  assert.equal(screen.elements['article-title'].textContent, 'Story 5');
-  assert.equal(screen.elements['paper-screen-dots'].children[5].attributes['aria-current'], 'true');
-  assert.match(screen.elements['paper-screen-dots'].children[5].attributes['aria-label'], /Story 5/);
-  screen.elements['paper-next'].click();
-  assert.equal(screen.elements['article-title'].textContent, 'Story 6');
-  assert.equal(screen.elements['screen-dots'].children[6].attributes['aria-current'], 'true');
-});
-
 test('weather renders night-aware central imagery and five forecast icons', async () => {
   const weather = { current: { temperature_2m: 68, apparent_temperature: 68, weather_code: 0,
     is_day: 0, relative_humidity_2m: 85, wind_speed_10m: 9 }, daily: {
@@ -125,7 +107,7 @@ test('weather renders night-aware central imagery and five forecast icons', asyn
 test('display markup has no app header, story count, article link, or quote collection link', () => {
   const markup = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
   assert.match(markup, />The Daily</);
-  for (const removed of ['class="masthead"', 'id="article-page"', 'id="article-link"', 'FROM THE QUOTE COLLECTION', 'darrelld.com', '02 / OUTSIDE', 'WEATHER DATA / OPEN-METEO']) {
+  for (const removed of ['screen-dots', 'screen-dot', 'class="masthead"', 'id="article-page"', 'id="article-link"', 'FROM THE QUOTE COLLECTION', 'darrelld.com', '02 / OUTSIDE', 'WEATHER DATA / OPEN-METEO']) {
     assert.equal(markup.includes(removed), false, removed);
   }
   const weather = markup.match(/<section[^>]+id="weather"[\s\S]*?<\/section>/)[0];
@@ -141,8 +123,9 @@ test('story controls reach weather and return to stories without a headline list
   screen.elements['paper-next'].click();
   assert.equal(screen.elements.weather.classList.contains('active'), true);
   assert.equal(screen.extras['.footer'].inert, false);
-  screen.navigation.find((button) => button.dataset.panel === 'article').click();
-  assert.equal(screen.elements['article-title'].textContent, 'Story 0');
+  screen.listeners.keydown({ key: 'ArrowLeft', target: { tagName: 'BODY' }, preventDefault() {} });
+  assert.equal(screen.elements.article.classList.contains('active'), true);
+  assert.equal(screen.elements['article-title'].textContent, 'Story 2');
 });
 
 test('progress advances on animation frames between seconds, freezes on pause, and resumes', async () => {

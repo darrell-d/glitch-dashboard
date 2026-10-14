@@ -46,10 +46,8 @@ Each rotation shows **three individual story pages → weather → quote**, then
 advances to the next batch of stories. There is no headline list. Every screen uses the
 configured duration (30 seconds by default). The edition's stories stay together
 while new feed data is held for the next batch, so a refresh does not replace
-an article midway through display. Every selected story has its own accessible
-navigation dot, followed by weather and quote dots; no visible section labels.
-Dots can jump to stories outside the current batch. Arrow keys step through
-individual pages. News pages and the general display each have a matching dot row.
+an article midway through display. There are no navigation dots or visible section
+labels. Arrow keys step through individual pages.
 
 Open **http://localhost:8080/#article** to jump directly to the first story as
 soon as feed data is available. Story controls appear when hovering or focusing

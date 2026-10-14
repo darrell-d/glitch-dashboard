@@ -2,7 +2,7 @@
 
 - [x] Rename masthead to The Daily with styled editorial typography.
 - [x] Add blurred photo fill behind uncropped story images.
-- [x] Add one dot per story and replace visible section navigation with dots.
+- [x] Remove all navigation dots; retain rotation, keyboard navigation, and controls.
 - [x] Remove app header, article counts/links, and redundant source/collection labels.
 - [x] Add day/night-aware current weather artwork and five forecast icons.
 

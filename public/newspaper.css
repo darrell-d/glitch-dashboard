@@ -29,8 +29,6 @@
   min-height: 0;
   padding: clamp(20px, 3.3vw, 76px);
   gap: clamp(8px, 1.6vh, 24px);
-  --dot-color:#8c826c;
-  --dot-active:#8b352b;
   background-image: repeating-linear-gradient(0deg, #77674604 0, #77674604 1px, transparent 1px, transparent 4px);
 }
 .paper-masthead { border-bottom: 4px double var(--ink); padding-bottom: 1.3vh; }
@@ -63,7 +61,6 @@
 .paper-no-image .paper-name { white-space: normal; }
 .headline button { background: none; border: 0; color: inherit; text-align: left; padding: 0; font: inherit; cursor: pointer; font-size: clamp(18px,2.4vw,54px); line-height: 1.2; letter-spacing: -.025em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .headline button:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .15em; }
-[data-panel=article]:disabled { opacity: .4; cursor: default; }
 @media (hover: none) { .paper-controls { opacity: 1; } }
 @media (max-aspect-ratio: 1/1) {
   .newspaper { grid-template-columns: 1fr; grid-template-rows: min(45vh, 100vw) minmax(0, 1fr); grid-template-rows: min(45dvh, 100vw) minmax(0, 1fr); }

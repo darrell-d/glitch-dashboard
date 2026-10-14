@@ -7,7 +7,8 @@
 - Rename the masthead The Daily with italic Bodoni typography and remove the
   global header, story count, outbound article link, and visible section labels.
 - Fill photo letterboxing with a blurred enlarged copy of the uncropped image.
-- Add an individual accessible dot for every story plus weather/quote dots.
+- Remove navigation dots from every screen; retain automatic rotation, keyboard
+  navigation, and display controls.
 - Add condition-driven central weather artwork and forecast icons, including
   day/night-aware clear skies; move weather attribution into Settings.
 - Remove weather provider/Outside labels and quote collection/source links.

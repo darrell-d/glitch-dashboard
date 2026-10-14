@@ -14,7 +14,6 @@ let started = performance.now();
 let elapsed = 0;
 let pendingArticle = location.hash === '#article';
 let rotationItems = [];
-let dotButtons = [];
 
 function readStored(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
@@ -40,47 +39,6 @@ function number(value) { return Number.isFinite(value) ? Math.round(value) : 'â€
 function celsius(value) { return number((value - 32) * 5 / 9); }
 const condition = WeatherVisual.description;
 
-function renderNavigation() {
-  dotButtons = [];
-  for (const container of [$('screen-dots'), $('paper-screen-dots')]) {
-    container.replaceChildren();
-    rotationItems.forEach((item, index) => {
-      const button = node('button', 'screen-dot');
-      button.type = 'button';
-      button.dataset.panel = 'article';
-      button.dataset.storyIndex = String(index);
-      button.setAttribute('aria-label', `${item.source || 'News'}: ${item.title}`);
-      button.title = `${item.source || 'News'}: ${item.title}`;
-      button.addEventListener('click', () => {
-        newsOffset = index;
-        screens = DashboardEdition.createEdition(rotationItems, newsOffset);
-        showPanel(0);
-      });
-      dotButtons.push({ button, panel: 'article', storyIndex: index });
-      container.append(button);
-    });
-    for (const [panel, label] of [['weather', 'Weather'], ['quote', 'Quote']]) {
-      const button = node('button', 'screen-dot');
-      button.type = 'button';
-      button.dataset.panel = panel;
-      button.setAttribute('aria-label', label);
-      button.title = label;
-      button.addEventListener('click', () => showPanel(screens.findIndex((screen) => screen.panel === panel)));
-      dotButtons.push({ button, panel });
-      container.append(button);
-    }
-  }
-  updateNavigation();
-}
-
-function updateNavigation() {
-  const screen = screens[current];
-  dotButtons.forEach(({ button, panel, storyIndex }) => {
-    const active = screen.panel === panel && (panel !== 'article' || storyIndex === screen.storyIndex);
-    button.setAttribute('aria-current', String(active));
-  });
-}
-
 function renderNews(data) {
   $('source-status-list').replaceChildren(...(data.sources || []).map((source) => {
     const state = !source.available ? 'unavailable' : `${source.count} stories${source.stale ? ' Â· cached' : ''}`;
@@ -91,7 +49,6 @@ function renderNews(data) {
   rotationItems = data.items.map((item) => ({ ...item }));
   screens = DashboardEdition.createEdition(rotationItems, newsOffset);
   current = 0;
-  renderNavigation();
   showPanel(0);
 }
 
@@ -278,7 +235,6 @@ function showPanel(index) {
       rotationItems = records.news.data.items.map((item) => ({ ...item }));
       screens = DashboardEdition.createEdition(rotationItems, newsOffset);
       current = 0;
-      renderNavigation();
     }
     index = 0;
   }
@@ -292,7 +248,6 @@ function showPanel(index) {
     $(name).inert = !active;
     $(name).setAttribute('aria-hidden', String(!active));
   });
-  updateNavigation();
   if (screen.panel === 'article') renderArticle(screen);
   if (screen.panel === 'quote') { refresh('quote'); requestAnimationFrame(fitQuote); }
   history.replaceState(null, '', `#${screen.panel}`);
@@ -409,6 +364,5 @@ function animateProgress() {
   requestAnimationFrame(animateProgress);
 }
 requestAnimationFrame(animateProgress);
-renderNavigation();
 setInterval(updateClock, 1000);
 init();

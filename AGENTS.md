@@ -20,8 +20,8 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
 - Display name is "The Daily", in italic Bodoni Moda with local serif fallbacks.
   Do not add a glitch effect. Keep article counts and outbound article links off
   the display. Non-square photos use a blurred copy behind the uncropped original.
-- No global app header or visible section names. Each story has a navigation dot,
-  with weather/quote dots after the stories; accessible labels remain.
+- No global app header, visible section names, or navigation dots anywhere.
+  Keep automatic rotation, keyboard navigation, and display controls.
 - Weather uses local SVG artwork based on WMO condition and `is_day`, plus five
   forecast icons. No provider/Outside labels on the screen; attribution in Settings.
 - Quote pages show quote/author without collection labels or darrelld.com links.
