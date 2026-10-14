@@ -174,6 +174,10 @@ test('radar screen is centered on the configured ZIP and has live map layers', a
   assert.ok(screen.elements['radar-map'].children.length >= 2);
   assert.equal(screen.elements['radar-temperatures'].children[0].children[0].textContent, 'Harrisburg');
   assert.equal(screen.elements['radar-temperatures'].children[0].children[1].textContent, '69°');
+  assert.equal(screen.elements['radar-map'].children.filter((child) => child.className.includes('radar-forecast')).length, 6);
+  screen.run('showRadarFrame(4)');
+  assert.equal(screen.elements.radar.dataset.mode, 'forecast');
+  assert.match(screen.elements['radar-mode'].textContent, /^FORECAST/);
 });
 
 test('radar display omits the title block and visible provider credit line', () => {

@@ -39,7 +39,9 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
 - Regional radar uses four recent RainViewer frames over visible OpenStreetMap tiles,
   centered on the selected ZIP, with major-city locations from a pinned GeoNames
   catalog and Open-Meteo temperatures. Prefer capitals and population centers while
-  keeping labels sparse. Keep provider details in Settings and tile requests limited to the viewport.
+  keeping labels sparse. Six hourly WeatherAPI.com precipitation forecast tiles follow
+  the observed frames at source zoom 6, scaled over the same map. Keep provider details
+  in Settings and tile requests limited to the viewport.
 - Quote pages use the editorial-rule layout without a quotation-mark glyph,
   collection labels, or darrelld.com links.
 - Display loading, unavailable, and stale states honestly; do not present sample

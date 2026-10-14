@@ -54,6 +54,8 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
 - **Regional radar:** A full-screen map centered on the selected ZIP, with four
   recent precipitation frames animated over OpenStreetMap and current temperatures
   over a restrained set of major cities selected by population and capital status.
+  Six hourly WeatherAPI.com forecast frames follow the observed radar, with a distinct
+  forecast label and color key while the base map remains fixed.
   Provider details remain in Settings so the
   map itself stays visually quiet. Missing radar data does not stop the rest of the rotation.
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`, set in

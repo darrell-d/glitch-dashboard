@@ -4,6 +4,8 @@
 
 ### Features
 
+- Follow observed radar with six hourly WeatherAPI.com precipitation forecast frames,
+  switching the status label and color key while keeping the same base map and city layer.
 - Add a full-screen regional map with four animated RainViewer precipitation
   frames and major-city temperatures, with provider attribution available in Settings.
 - Replace fixed weather coordinates with a browser-saved US ZIP setting that

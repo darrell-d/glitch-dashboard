@@ -49,8 +49,8 @@
     <section class="panel radar" id="radar" aria-label="Regional weather radar" inert aria-hidden="true">
       <div id="radar-map" class="radar-map" aria-hidden="true"></div>
       <div class="radar-shade" aria-hidden="true"></div>
-      <div class="radar-time"><span>PRECIPITATION</span><time id="radar-frame-time"></time></div>
-      <div class="radar-legend" aria-label="Precipitation intensity from light to heavy"><span>Light</span><i></i><i></i><i></i><i></i><i></i><i></i><span>Heavy</span></div>
+      <div class="radar-time"><span id="radar-mode">OBSERVED</span><time id="radar-frame-time"></time></div>
+      <div id="radar-legend" class="radar-legend" aria-label="Observed radar intensity from light to heavy"><span>Light</span><i></i><i></i><i></i><i></i><i></i><i></i><span>Heavy</span></div>
       <div id="radar-temperatures" class="radar-temperatures"></div>
       <div class="radar-bottom"><span id="radar-status" role="status">Connecting</span></div>
     </section>
@@ -78,7 +78,7 @@
       <div class="color-setting"><label for="weather-icon-color">Monochrome color</label><input id="weather-icon-color" type="color" value="#dce7d6"></div>
       <p>Saved on this browser. Weather, clock, and radar follow this ZIP code.</p>
       <details class="source-settings"><summary>News sources</summary><ul id="source-status-list"></ul></details>
-      <p class="data-credit">Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a><br>Radar: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> · City locations: <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> · CC BY 4.0<br>Weather icons: <a href="https://meteocons.com/" target="_blank" rel="noopener">Meteocons</a> · MIT</p>
+      <p class="data-credit">Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a><br>Radar: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> · Forecast maps: <a href="https://www.weatherapi.com/" target="_blank" rel="noopener">WeatherAPI.com</a> · City locations: <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> · CC BY 4.0<br>Weather icons: <a href="https://meteocons.com/" target="_blank" rel="noopener">Meteocons</a> · MIT</p>
       <div class="dialog-actions"><button value="cancel" formnovalidate>Cancel</button><button value="save" class="primary">Save settings</button></div>
     </form>
   </dialog>

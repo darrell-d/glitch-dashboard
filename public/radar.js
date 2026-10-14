@@ -39,7 +39,17 @@
     return { x: width / 2 + point.x - center.x, y: height / 2 + point.y - center.y };
   }
 
-  const api = { project, tileLayout, viewportPoint };
+  function forecastFrames(now = Date.now(), count = 6) {
+    const firstHour = Math.floor(now / 3600000) * 3600000 + 3600000;
+    return Array.from({ length: count }, (_, index) => {
+      const date = new Date(firstHour + index * 3600000);
+      const stamp = `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, '0')}`
+        + `${String(date.getUTCDate()).padStart(2, '0')}${String(date.getUTCHours()).padStart(2, '0')}`;
+      return { time: Math.floor(date.getTime() / 1000), stamp, leadHours: index + 1 };
+    });
+  }
+
+  const api = { project, tileLayout, viewportPoint, forecastFrames };
   if (typeof module !== 'undefined') module.exports = api;
   else root.RadarMap = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

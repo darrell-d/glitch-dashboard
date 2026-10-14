@@ -75,6 +75,9 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .radar-base img { filter:grayscale(.35) saturate(.65) brightness(.58) contrast(1.08); }
 .radar-precipitation { opacity:0; }
 .radar-precipitation.active { opacity:.78; }
+.radar-forecast { mix-blend-mode:darken; }
+.radar-forecast.active { opacity:.82; }
+.radar-forecast img { filter:contrast(1.8) saturate(1.35); }
 .radar-shade { position:absolute; inset:0; background:linear-gradient(180deg,#0b1415cc 0,#0b141533 24%,transparent 55%,#0b14158c 100%); pointer-events:none; }
 .radar-time { position:absolute; z-index:2; top:clamp(28px,4vh,64px); right:clamp(28px,4.5vw,100px); text-align:right; font-weight:700; letter-spacing:.08em; font-size:clamp(12px,1vw,22px); text-shadow:0 2px 18px #000; }
 .radar-time span { display:block; color:var(--dim); font-size:.65em; margin-bottom:5px; }
@@ -87,6 +90,13 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .radar-legend i:nth-of-type(4) { background:#ed7c24; }
 .radar-legend i:nth-of-type(5) { background:#d72d25; }
 .radar-legend i:nth-of-type(6) { margin-right:8px; background:#8f173a; }
+.radar[data-mode=forecast] .radar-legend { border-color:#8bc7ff70; }
+.radar[data-mode=forecast] .radar-legend i:nth-of-type(1) { background:#9bd3ff; }
+.radar[data-mode=forecast] .radar-legend i:nth-of-type(2) { background:#43a8f5; }
+.radar[data-mode=forecast] .radar-legend i:nth-of-type(3) { background:#168dde; }
+.radar[data-mode=forecast] .radar-legend i:nth-of-type(4) { background:#9eae5b; }
+.radar[data-mode=forecast] .radar-legend i:nth-of-type(5) { background:#ffd000; }
+.radar[data-mode=forecast] .radar-legend i:nth-of-type(6) { background:#ff4d0a; }
 .radar-temperatures { position:absolute; z-index:2; inset:0; pointer-events:none; }
 .radar-temperature { position:absolute; transform:translate(-50%,-50%); min-width:108px; padding:4px 8px; color:#f5f3dc; text-align:center; text-shadow:0 2px 3px #000,0 0 8px #000,0 0 2px #000; }
 .radar-temperature strong { display:block; font-family:var(--sans); font-size:clamp(26px,2.3vw,52px); font-weight:700; line-height:.95; letter-spacing:-.05em; }

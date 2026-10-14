@@ -206,7 +206,11 @@ function showRadarFrame(index) {
   if (!radarFrames.length) return;
   radarFrameIndex = ((index % radarFrames.length) + radarFrames.length) % radarFrames.length;
   radarFrames.forEach((frame, i) => frame.layer.classList.toggle('active', i === radarFrameIndex));
-  const stamp = new Date(radarFrames[radarFrameIndex].time * 1000);
+  const frame = radarFrames[radarFrameIndex];
+  const stamp = new Date(frame.time * 1000);
+  $('radar').dataset.mode = frame.kind;
+  $('radar-mode').textContent = frame.kind === 'forecast' ? `FORECAST · +${frame.leadHours}H` : 'OBSERVED';
+  $('radar-legend').setAttribute('aria-label', `${frame.kind === 'forecast' ? 'Forecast precipitation' : 'Observed radar'} intensity from light to heavy`);
   $('radar-frame-time').textContent = new Intl.DateTimeFormat('en-US', {
     hour: 'numeric', minute: '2-digit', timeZone: config.timezone,
   }).format(stamp);
@@ -222,12 +226,20 @@ function renderRadar(data) {
   const base = node('div', 'radar-layer radar-base');
   RadarMap.tileLayout(latitude, longitude, width, height, 8, 256).forEach((tile) =>
     radarTile(base, tile, 256, ({ x, y }) => `https://tile.openstreetmap.org/8/${x}/${y}.png`));
-  radarFrames = data.frames.map((frame) => {
+  const observedFrames = data.frames.map((frame) => {
     const layer = node('div', 'radar-layer radar-precipitation');
     RadarMap.tileLayout(latitude, longitude, width, height, 7, 512).forEach((tile) =>
       radarTile(layer, tile, 512, ({ x, y }) => `${data.host}${frame.path}/512/7/${x}/${y}/2/1_1.png`));
-    return { layer, time: frame.time };
+    return { layer, time: frame.time, kind: 'observed' };
   });
+  const forecastFrames = RadarMap.forecastFrames(Date.now(), 6).map((frame) => {
+    const layer = node('div', 'radar-layer radar-precipitation radar-forecast');
+    RadarMap.tileLayout(latitude, longitude, width, height, 6, 1024).forEach((tile) =>
+      radarTile(layer, tile, 1024, ({ x, y }) =>
+        `https://weathermaps.weatherapi.com/precip/tiles/${frame.stamp}/6/${x}/${y}.png`));
+    return { ...frame, layer, kind: 'forecast' };
+  });
+  radarFrames = [...observedFrames, ...forecastFrames];
   map.replaceChildren(base, ...radarFrames.map((frame) => frame.layer));
   const labels = [];
   const currentTemperature = records.weather?.data?.current?.temperature_2m;
