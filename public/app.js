@@ -6,7 +6,7 @@ const panels = ['news', 'article', 'weather', 'quote'];
 let screens = DashboardEdition.createEdition([]);
 const records = {};
 let config = { location: 'Philadelphia', timezone: 'America/New_York' };
-let options = { duration: 30, transition: 'fade', weatherIconStyle: 'weekly' };
+let options = { duration: 30, transition: 'fade', weatherIconStyle: 'weekly', weatherIconColor: '#dce7d6' };
 let current = 0;
 let newsOffset = 0;
 let paused = false;
@@ -24,7 +24,8 @@ function store(key, value) {
 function validOptions(value) {
   return value && Number.isFinite(value.duration) && value.duration >= 5 && value.duration <= 600
     && ['fade', 'slide', 'none'].includes(value.transition)
-    && (value.weatherIconStyle === undefined || ['weekly', ...WeatherVisual.STYLES].includes(value.weatherIconStyle));
+    && (value.weatherIconStyle === undefined || ['weekly', ...WeatherVisual.STYLES].includes(value.weatherIconStyle))
+    && (value.weatherIconColor === undefined || /^#[0-9a-f]{6}$/i.test(value.weatherIconColor));
 }
 const savedOptions = readStored('glitch-display-options');
 if (validOptions(savedOptions)) options = { ...options, ...savedOptions };
@@ -126,7 +127,7 @@ function renderWeather(data) {
   illustration.dataset.kind = WeatherVisual.appearance(now.weather_code, isDay);
   illustration.setAttribute('role', 'img');
   illustration.setAttribute('aria-label', `${condition(now.weather_code)}${isDay ? '' : ' at night'}`);
-  illustration.innerHTML = WeatherVisual.icon(now.weather_code, isDay, iconStyle);
+  illustration.innerHTML = WeatherVisual.icon(now.weather_code, isDay, iconStyle, options.weatherIconColor);
   const conditions = node('div', 'conditions');
   conditions.append(node('p', 'condition-label', condition(now.weather_code)));
   const details = node('div', 'weather-detail');
@@ -154,7 +155,7 @@ function renderWeather(data) {
     hour.setAttribute('aria-label', `${displayHour(stamp, i)}: ${condition(code)}, ${number(hourly.temperature_2m[i])}°F, ${rain}% chance of precipitation`);
     const icon = node('div', 'hourly-icon');
     icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = WeatherVisual.icon(code, hourly.is_day[i] !== 0, iconStyle);
+    icon.innerHTML = WeatherVisual.icon(code, hourly.is_day[i] !== 0, iconStyle, options.weatherIconColor);
     const rainChance = node('div', 'hourly-rain', `${rain}%`);
     if (rain >= 30) rainChance.dataset.wet = 'true';
     hour.append(node('div', 'hourly-time', displayHour(stamp, i)), icon,
@@ -169,7 +170,7 @@ function renderWeather(data) {
     column.append(node('div', 'forecast-name', i === 0 ? 'TODAY' : dayName.toUpperCase()));
     const icon = node('div', 'forecast-icon');
     icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = WeatherVisual.icon(daily.weather_code[i], true, iconStyle);
+    icon.innerHTML = WeatherVisual.icon(daily.weather_code[i], true, iconStyle, options.weatherIconColor);
     column.append(icon);
     const high = node('div', 'forecast-temp', `${number(daily.temperature_2m_max[i])}°`);
     high.append(node('span', '', ` / ${number(daily.temperature_2m_min[i])}°F`));
@@ -179,6 +180,7 @@ function renderWeather(data) {
     forecast.append(column);
   });
   content.replaceChildren(summary, hourlySection, forecast);
+  WeatherVisual.hydrate(content);
 }
 
 function fitQuote() {
@@ -339,13 +341,14 @@ $('settings').addEventListener('click', () => {
   $('duration').value = options.duration;
   $('transition').value = options.transition;
   $('weather-icon-style').value = options.weatherIconStyle;
+  $('weather-icon-color').value = options.weatherIconColor;
   $('settings-dialog').returnValue = '';
   $('settings-dialog').showModal();
 });
 $('settings-dialog').addEventListener('close', () => {
   if ($('settings-dialog').returnValue === 'save') {
     const value = { duration: Number($('duration').value), transition: $('transition').value,
-      weatherIconStyle: $('weather-icon-style').value };
+      weatherIconStyle: $('weather-icon-style').value, weatherIconColor: $('weather-icon-color').value };
     if (validOptions(value)) {
       options = value;
       store('glitch-display-options', options);

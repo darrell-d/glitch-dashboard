@@ -128,10 +128,12 @@ test('weather icon style can be fixed in settings', async () => {
   const screen = await app('', { weather });
   screen.elements.settings.click();
   screen.elements['weather-icon-style'].value = 'monochrome';
+  screen.elements['weather-icon-color'].value = '#c6f294';
   screen.elements['settings-dialog'].returnValue = 'save';
   screen.elements['settings-dialog'].listeners.close();
   assert.match(screen.elements['weather-content'].children[0].children[1].innerHTML,
     /\/meteocons\/monochrome\/clear-day\.svg/);
+  assert.match(screen.elements['weather-content'].children[0].children[1].innerHTML, /color:#c6f294/);
 });
 
 test('display markup has no app header, story count, article link, or quote collection link', () => {

@@ -41,7 +41,9 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   large condition illustration fills the center, with day/night-aware sun/moon,
   clouds, rain, fog, snow, or storms. Current, hourly, and daily conditions use
   Meteocons; Fill, Flat, Line, and Monochrome rotate weekly or can be fixed in
-  Settings. The pinned SVG assets are served locally for display reliability.
+  Settings. The monochrome color is also configurable, with a light sage default
+  chosen for the dark green display. The pinned SVG assets are served locally
+  for display reliability.
   A secondary lunar readout shows the current moon phase and illuminated
   percentage using a local astronomical calculation.
   Data and icon attribution is in Settings instead of on the weather screen.

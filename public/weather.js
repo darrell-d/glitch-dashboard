@@ -49,10 +49,37 @@
     const resolved = resolveStyle(style);
     return `/meteocons/${resolved}/${slug(code, isDay)}.svg`;
   }
-  function icon(code, isDay = true, style = 'fill') {
-    return `<img src="${iconUrl(code, isDay, style)}" alt="" aria-hidden="true">`;
+  function safeColor(value) {
+    return /^#[0-9a-f]{6}$/i.test(value || '') ? value : '#dce7d6';
   }
-  const api = { STYLES, appearance, slug, description, weekIndex, styleForWeek, resolveStyle, iconUrl, icon };
+  function icon(code, isDay = true, style = 'fill', monochromeColor = '#dce7d6') {
+    const resolved = resolveStyle(style);
+    const url = iconUrl(code, isDay, resolved);
+    if (resolved === 'monochrome') {
+      return `<span class="meteocon-inline" data-meteocon-src="${url}" aria-hidden="true" style="color:${safeColor(monochromeColor)};--meteocon-url:url('${url}')"></span>`;
+    }
+    return `<img src="${url}" alt="" aria-hidden="true">`;
+  }
+  const svgCache = new Map();
+  async function hydrate(root) {
+    if (!root || typeof root.querySelectorAll !== 'function' || typeof fetch !== 'function') return;
+    const icons = [...root.querySelectorAll('[data-meteocon-src]')];
+    await Promise.all(icons.map(async (element) => {
+      const url = element.dataset.meteoconSrc;
+      try {
+        if (!svgCache.has(url)) {
+          svgCache.set(url, fetch(url).then((response) => {
+            if (!response.ok) throw new Error('Icon unavailable');
+            return response.text();
+          }));
+        }
+        element.innerHTML = await svgCache.get(url);
+        element.classList.add('hydrated');
+      } catch { /* Keep the colored mask fallback. */ }
+    }));
+  }
+  const api = { STYLES, appearance, slug, description, weekIndex, styleForWeek, resolveStyle,
+    iconUrl, safeColor, icon, hydrate };
   if (typeof module !== 'undefined') module.exports = api;
   else root.WeatherVisual = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -9,7 +9,7 @@
 - [x] Add a secondary moon-phase and illumination readout to weather.
 - [x] Add a compact next-12-hours forecast beneath current conditions.
 - [x] Polish hourly spacing/dividers and correct crescent phase masking.
-- [x] Use Meteocons with weekly style rotation and a settings override.
+- [x] Use Meteocons with weekly style rotation, a settings override, and a configurable monochrome color.
 - [ ] Add air quality, smoke, pollen, and other local weather-event data after choosing a layout.
 
 - [x] Add nine requested sources alongside NYT, capped at four stories each.

@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { appearance, description, icon, iconUrl, slug, styleForWeek } = require('../public/weather.js');
+const { appearance, description, icon, iconUrl, safeColor, slug, styleForWeek } = require('../public/weather.js');
 
 test('day/night imagery uses sun and moon for clear and partly cloudy skies', () => {
   assert.equal(appearance(0, true), 'sun');
@@ -44,4 +44,11 @@ test('automatic icon style changes weekly and repeats every four weeks', () => {
     '2026-01-12T12:00:00Z', '2026-01-19T12:00:00Z'].map((stamp) => styleForWeek(new Date(stamp)));
   assert.equal(new Set(weeks.slice(0, 4)).size, 4);
   assert.equal(weeks[4], weeks[0]);
+});
+
+test('monochrome icons accept a safe custom color', () => {
+  assert.match(icon(0, true, 'monochrome', '#c6f294'), /style="color:#c6f294;/);
+  assert.match(icon(0, true, 'monochrome', 'red;display:none'), /style="color:#dce7d6;/);
+  assert.equal(safeColor('#ABCDEF'), '#ABCDEF');
+  assert.equal(safeColor('not-a-color'), '#dce7d6');
 });

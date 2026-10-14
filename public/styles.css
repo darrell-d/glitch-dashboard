@@ -44,6 +44,9 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .weather-art { justify-self:center; width:min(32vw,44vh); width:min(32vw,44dvh); aspect-ratio:1; border-radius:50%; background:radial-gradient(circle,#8ca9bb12,transparent 65%); }
 .weather-art[data-kind=sun],.weather-art[data-kind=partly-day] { background:radial-gradient(circle,#eab65518,transparent 65%); }
 .weather-art img { display:block; width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 16px 35px #8fa8b122); }
+.meteocon-inline { display:block; width:100%; height:100%; background:currentColor; -webkit-mask:var(--meteocon-url) center/contain no-repeat; mask:var(--meteocon-url) center/contain no-repeat; }
+.meteocon-inline.hydrated { background:none; -webkit-mask:none; mask:none; }
+.meteocon-inline svg { display:block; width:100%; height:100%; }
 .hourly-section { min-width:0; padding-top:clamp(10px,1.3vh,20px); }
 .hourly-label { color:var(--dim); font-size:clamp(10px,.7vw,15px); letter-spacing:.12em; margin-bottom:.7vh; }
 .hourly-forecast { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); border-top:1px solid var(--line); }
@@ -84,6 +87,9 @@ dialog::backdrop { background:#0009; backdrop-filter:blur(6px); }
 dialog h2 { font-family:var(--serif); font-size:38px; font-weight:400; margin:15px 0 28px; }
 dialog label { display:block; margin:20px 0 8px; }
 dialog input,dialog select { width:100%; padding:10px; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:4px; }
+.color-setting { display:grid; grid-template-columns:1fr 64px; align-items:end; gap:18px; }
+.color-setting label { margin-bottom:8px; }
+.color-setting input[type=color] { height:40px; padding:3px; }
 dialog p { color:var(--dim); font-size:13px; line-height:1.6; }
 .eyebrow { color:var(--accent); font-size:11px; letter-spacing:.12em; }
 .dialog-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:25px; }
