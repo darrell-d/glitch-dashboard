@@ -12,6 +12,12 @@
 - [x] Use Meteocons with weekly style rotation, a settings override, and a configurable monochrome color.
 - [ ] Add air quality, smoke, pollen, and other local weather-event data after choosing a layout.
 
+- [ ] Replace the fixed panel sequence with an extensible screen registry and lifecycle hooks.
+- [ ] Add `/Users/darrelldefreitas/code/gen_art/LawnMower` as an autonomous full-screen web screen.
+- [ ] Add a high-resolution Mandelbrot or related mathematical generative-art screen.
+- [ ] Add reusable full-viewport treatments for art that does not match the display aspect ratio.
+- [ ] Harden startup, recovery, resource cleanup, and diagnostics for unattended operation.
+
 - [x] Add nine requested sources alongside NYT, capped at four stories each.
 - [x] Add publisher labels, interleaving, independent caches, and source health.
 - [x] Support RSS/Atom, CNN preview metadata, and TechCrunch featured photos.

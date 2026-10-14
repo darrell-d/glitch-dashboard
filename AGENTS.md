@@ -4,7 +4,10 @@ Personal monitor dashboard: Python standard-library server plus buildless HTML,
 CSS, and JavaScript. curl is required for POLITICO (included in Docker).
 `make run`, `make test`, and `make check` are entrypoints.
 
-- Read `README.md`, `TODO.md`, and local `agent-notes/` before implementing.
+- Read `VISION.md`, `README.md`, `TODO.md`, and local `agent-notes/` before implementing.
+- This is an unattended home magic-mirror display that balances information with
+  generative art. New screens should follow the extensible, full-screen direction
+  documented in `VISION.md`.
 - Keep the experience full-viewport and readable at a distance.
 - Keep rotation timing and transition choice configurable.
 - Rotation: three individual story pages, weather, quote, then the next batch.

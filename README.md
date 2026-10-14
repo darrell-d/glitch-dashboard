@@ -2,6 +2,9 @@
 
 **The Daily**: a rotating, full-viewport dashboard for a dedicated monitor.
 
+The longer-term magic-mirror experience and screen architecture are documented in
+[VISION.md](VISION.md).
+
 ## Run
 
 Requires Python 3.11 or newer and curl (for POLITICO's public feed).
