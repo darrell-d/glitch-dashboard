@@ -62,6 +62,7 @@
 
 ### Bugfixes
 
+- Move the radar precipitation key to the bottom center to balance the map overlay.
 - Remove the radar title block and on-map provider credit line so the weather map
   and temperature markers use the full visual field; retain provider details in Settings.
 - Replace airport and reporting-station temperature cards with sparse, broadcast-style
