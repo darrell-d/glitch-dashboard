@@ -40,7 +40,8 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   clouds, rain, fog, snow, or storms. Each forecast day has a simpler icon.
   Local SVG assets need no image service or extra runtime library. Data provider
   attribution is in Settings instead of on the weather screen.
-- **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`.
+- **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`, set in
+  an editorial lockup with a vertical accent rule and the author below a fine rule.
 
 Each rotation shows **three individual story pages → weather → quote**, then
 advances to the next batch of stories. There is no headline list. Every screen uses the

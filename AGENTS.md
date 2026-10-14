@@ -24,7 +24,8 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   Keep automatic rotation, keyboard navigation, and display controls.
 - Weather uses local SVG artwork based on WMO condition and `is_day`, plus five
   forecast icons. No provider/Outside labels on the screen; attribution in Settings.
-- Quote pages show quote/author without collection labels or darrelld.com links.
+- Quote pages use the editorial-rule layout without a quotation-mark glyph,
+  collection labels, or darrelld.com links.
 - Display loading, unavailable, and stale states honestly; do not present sample
   content as live data.
 - Keep upstream refresh intervals independent from panel rotation.

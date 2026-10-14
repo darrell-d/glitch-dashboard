@@ -9,6 +9,8 @@
 - Fill photo letterboxing with a blurred enlarged copy of the uncropped image.
 - Remove navigation dots from every screen; retain automatic rotation, keyboard
   navigation, and display controls.
+- Restyle quote screens around a vertical editorial rule and grouped author line;
+  remove the detached quotation-mark glyph.
 - Add condition-driven central weather artwork and forecast icons, including
   day/night-aware clear skies; move weather attribution into Settings.
 - Remove weather provider/Outside labels and quote collection/source links.

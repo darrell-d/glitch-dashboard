@@ -41,10 +41,10 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .forecast-temp span { color:var(--dim); font-size:.65em; }
 .forecast-celsius { font-size:clamp(10px,.95vw,20px); color:var(--dim); margin-top:.5vh; }
 .forecast-condition { grid-column:1 / -1; font-size:clamp(10px,.95vw,20px); color:var(--dim); margin-top:.8vh; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
-.quote-content { flex:1; min-height:0; position:relative; display:flex; flex-direction:column; justify-content:center; padding:4vh 4vw 3vh 6vw; overflow:hidden; }
-.quote-mark { position:absolute; left:0; top:4vh; color:var(--accent); font-family:var(--serif); font-size:clamp(90px,14vw,300px); line-height:1; }
+.quote-content { flex:1; min-height:0; display:flex; align-items:center; padding:5vh 8vw 4vh; overflow:hidden; }
+.quote-lockup { width:100%; max-width:1500px; border-left:2px solid var(--accent); padding-left:clamp(28px,4vw,80px); }
 blockquote { font-family:var(--serif); font-size:clamp(32px,5.6vw,124px); line-height:1.12; margin:0; letter-spacing:-.015em; overflow-wrap:anywhere; }
-.quote-author { font-size:clamp(14px,1.4vw,32px); color:var(--accent); margin:3vh 0 0; }
+.quote-author { border-top:1px solid var(--line); font-size:clamp(14px,1.4vw,32px); color:var(--accent); margin:3.5vh 0 0; padding-top:2vh; }
 .quote-author:before { content:'— '; color:var(--dim); }
 .quote-author:empty:before { content:none; }
 .footer { position:fixed; z-index:5; bottom:0; left:0; right:0; display:flex; align-items:center; gap:20px; min-height:64px; padding:10px clamp(24px,4.5vw,100px) 14px; }
@@ -78,6 +78,8 @@ dialog p { color:var(--dim); font-size:13px; line-height:1.6; }
   .forecast-icon { width:40px; }
   .forecast-temp { font-size:18px; }
   .forecast-condition { max-width:100%; font-size:9px; }
+  .quote-content { padding-left:24px; padding-right:24px; }
+  .quote-lockup { padding-left:22px; }
   .footer { padding:8px 24px 10px; gap:8px; }
   .controls { gap:9px; }
   .controls button { font-size:10px; }

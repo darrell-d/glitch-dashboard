@@ -107,9 +107,10 @@ test('weather renders night-aware central imagery and five forecast icons', asyn
 test('display markup has no app header, story count, article link, or quote collection link', () => {
   const markup = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
   assert.match(markup, />The Daily</);
-  for (const removed of ['screen-dots', 'screen-dot', 'class="masthead"', 'id="article-page"', 'id="article-link"', 'FROM THE QUOTE COLLECTION', 'darrelld.com', '02 / OUTSIDE', 'WEATHER DATA / OPEN-METEO']) {
+  for (const removed of ['screen-dots', 'screen-dot', 'quote-mark', 'class="masthead"', 'id="article-page"', 'id="article-link"', 'FROM THE QUOTE COLLECTION', 'darrelld.com', '02 / OUTSIDE', 'WEATHER DATA / OPEN-METEO']) {
     assert.equal(markup.includes(removed), false, removed);
   }
+  assert.match(markup, /class="quote-lockup"/);
   const weather = markup.match(/<section[^>]+id="weather"[\s\S]*?<\/section>/)[0];
   assert.doesNotMatch(weather, /Open-Meteo/);
 });
