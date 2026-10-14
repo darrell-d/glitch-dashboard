@@ -4,6 +4,10 @@
 
 ### Features
 
+- Fill story screens with a full-height uncropped square photo beside a cream
+  newspaper column, matching the approved photo-led design.
+- Add direct `/#article` access and story-local navigation, pause, fullscreen,
+  and settings controls without reserving dashboard header/footer space.
 - Add individual newspaper-style story screens with warm paper, bold serif
   headlines, large photos, short descriptions, bylines, dates, and photo credits.
 - Rotate headline overview, its article pages, weather, and quote; keep stories
@@ -26,6 +30,8 @@
 
 ### Bugfixes
 
+- Allow arrow-key story navigation while buttons have focus and revalidate
+  static assets on refresh so local UI changes load consistently.
 - Handle missing or failed story images with a text-focused newspaper layout.
 
 ### Performance

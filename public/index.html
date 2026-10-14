@@ -7,9 +7,9 @@
   <title>glitch / dashboard</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23101815'/%3E%3Ctext x='9' y='29' fill='%23c6f294' font-size='30'%3Eg%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/newspaper.css">
+  <link rel="stylesheet" href="/newspaper.css?v=photo-edition-1">
   <script src="/edition.js" defer></script>
-  <script src="/app.js" defer></script>
+  <script src="/app.js?v=photo-edition-1" defer></script>
 </head>
 <body data-transition="fade">
   <header class="masthead">
@@ -26,15 +26,21 @@
     </section>
 
     <section class="panel newspaper" id="article" aria-labelledby="article-title" inert aria-hidden="true">
-      <div class="paper-masthead"><span class="paper-edition">THE DAILY BRIEFING</span><span class="paper-name">The Glitch Gazette</span><span id="article-page" class="paper-edition"></span></div>
-      <div class="paper-dateline"><span>SELECTED FROM THE NEW YORK TIMES</span><time id="article-date"></time></div>
-      <h1 id="article-title" class="paper-headline">Today's dispatches</h1>
-      <div class="paper-byline" id="article-author"></div>
-      <div class="paper-lead">
-        <figure id="article-figure" class="paper-figure"><img id="article-image" alt=""><figcaption><span id="article-caption"></span><span id="article-credit"></span></figcaption></figure>
-        <div class="paper-summary"><span class="paper-kicker">THE STORY</span><p id="article-excerpt"></p><a id="article-link" target="_blank" rel="noopener">Read the full story ↗</a></div>
+      <figure id="article-figure" class="paper-figure"><img id="article-image" alt=""></figure>
+      <div class="paper-column">
+        <div class="paper-masthead"><span class="paper-name">The Glitch Gazette</span></div>
+        <div class="paper-dateline"><time id="article-date"></time><span id="article-page"></span></div>
+        <div class="paper-story">
+          <span class="paper-kicker">THE NEW YORK TIMES</span>
+          <h1 id="article-title" class="paper-headline">Today's dispatches</h1>
+          <p id="article-excerpt" class="paper-description"></p>
+          <div class="paper-byline" id="article-author"></div>
+        </div>
+        <div class="paper-photo-note"><span id="article-caption"></span><span id="article-credit"></span></div>
+        <div class="paper-bottom"><a id="article-link" target="_blank" rel="noopener">Read the full story ↗</a><span id="article-status" role="status"></span></div>
+        <nav class="paper-controls" aria-label="Story controls"><button id="paper-back">Headlines</button><button id="paper-previous" aria-label="Previous screen">←</button><button id="paper-pause">Pause</button><button id="paper-next" aria-label="Next screen">→</button><button id="paper-fullscreen">Fullscreen</button><button id="paper-settings">Settings</button></nav>
+        <div class="paper-progress-track"><div id="article-progress"></div></div>
       </div>
-      <div class="panel-bottom paper-bottom"><span>THE NEW YORK TIMES / TOP STORIES</span><span id="article-status" role="status"></span></div>
     </section>
 
     <section class="panel" id="weather" aria-labelledby="weather-heading" inert aria-hidden="true">

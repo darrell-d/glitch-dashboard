@@ -25,8 +25,11 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   are filtered out, preserving the first article in NYT's feed order. Click a
   headline to open its newspaper page.
 - **Newspaper:** A warm paper layout for each selected story, with a bold serif
-  headline, large image, short description, byline, publication date, and photo
-  credit. A link opens the original NYT article. The RSS source does not supply
+  headline, short description, byline, publication date, and photo credit. On a
+  16:9 monitor, the square photo fills the entire viewport height, uncropped and
+  in full color, with a cream newspaper column beside it. The dashboard header
+  and footer do not consume photo space. Portrait layouts stack the photo and
+  story. A link opens the original NYT article. The RSS source does not supply
   full article bodies; descriptions are displayed as supplied, with no invented
   article text or generated bullet summaries. Stories with missing or failed
   images use a text-focused layout.
@@ -41,6 +44,12 @@ configured duration (30 seconds by default). The edition's stories stay together
 while new feed data is held for the next overview, so a refresh does not replace
 an article midway through display. Newspaper navigation jumps to the first story
 in the current batch; arrow keys step through individual pages.
+
+Open **http://localhost:8080/#article** to jump directly to the first story as
+soon as feed data is available. Story controls appear when hovering or focusing
+the paper column (always visible on touch devices): Headlines, previous/next,
+pause, fullscreen, and settings. Keyboard arrows also work when a story button
+has focus. Static assets revalidate on refresh to pick up local changes.
 
 The confirmed `_glitch` routes also include `/quote/json` (daily),
 `/quote/json/reminder/random` (reminder-enabled quotes), and equivalent `/quotes/`
@@ -112,12 +121,14 @@ variables; intentionally change the port binding if LAN access is needed.
 
 ```sh
 make test   # standard-library unit tests
-make check  # tests, JavaScript syntax, and edition sequencing (requires Node.js)
+make check  # tests, JS syntax, edition sequencing, app navigation (requires Node.js)
 ```
 
 Automated checks cover feed adapters, cache TTL, outage retention, cooldown, and
 recovery, companion filtering, unrelated-story retention, newspaper metadata,
-and edition sequencing across refreshes. Live page and
+edition sequencing across refreshes, actual application rotation/navigation,
+direct story links, and failed-image fallback using a minimal DOM harness.
+These checks do not verify browser layout. Live page and
 all three API feeds were smoke-tested locally. Browser
 visual QA, physical monitor/casting behavior, and a Docker image build have not
 been performed. No deployment has been made.

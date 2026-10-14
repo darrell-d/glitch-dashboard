@@ -12,6 +12,7 @@ let newsOffset = 0;
 let paused = false;
 let started = performance.now();
 let elapsed = 0;
+let pendingArticle = location.hash === '#article';
 
 function readStored(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
@@ -78,7 +79,7 @@ function renderArticle(screen) {
   $('article-title').textContent = item.title;
   $('article-author').textContent = item.author ? `By ${item.author}` : 'The New York Times';
   $('article-excerpt').textContent = item.description || 'No description was supplied for this story. Read the original report at The New York Times.';
-  $('article-page').textContent = `DISPATCH ${String(screen.index + 1).padStart(2, '0')} / ${String(screen.count).padStart(2, '0')}`;
+  $('article-page').textContent = `${String(screen.index + 1).padStart(2, '0')} / ${String(screen.count).padStart(2, '0')}`;
   const published = new Date(item.published || NaN);
   $('article-date').textContent = Number.isFinite(published.getTime())
     ? new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: config.timezone }).format(published) : '';
@@ -88,7 +89,10 @@ function renderArticle(screen) {
   const image = $('article-image');
   const hasImage = typeof item.image_url === 'string' && item.image_url.startsWith('https://');
   $('article').classList.toggle('paper-no-image', !hasImage);
-  image.onerror = () => $('article').classList.add('paper-no-image');
+  image.onerror = () => {
+    $('article').classList.add('paper-no-image');
+    requestAnimationFrame(fitArticle);
+  };
   image.alt = item.image_caption || item.title;
   image.removeAttribute('src');
   if (hasImage) image.src = item.image_url;
@@ -103,15 +107,15 @@ function fitArticle() {
   const excerpt = $('article-excerpt');
   title.style.fontSize = '';
   excerpt.style.fontSize = '';
-  // Preserve space for the photograph when an unusually long headline wraps.
+  const column = document.querySelector('.paper-story');
+  // Fit real, often long headlines into the paper column without cropping photos.
   let titleSize = parseFloat(getComputedStyle(title).fontSize);
-  while (title.offsetHeight > $('article').clientHeight * .24 && titleSize > 18) {
+  while (column.scrollHeight > column.clientHeight + 1 && titleSize > 26) {
     titleSize -= 1;
     title.style.fontSize = `${titleSize}px`;
   }
-  const column = excerpt.parentElement;
   let size = parseFloat(getComputedStyle(excerpt).fontSize);
-  while (column.scrollHeight > column.clientHeight + 1 && size > 12) {
+  while (column.scrollHeight > column.clientHeight + 1 && size > 14) {
     size -= 1;
     excerpt.style.fontSize = `${size}px`;
   }
@@ -186,6 +190,7 @@ async function refresh(name) {
     renderers[name](value.data);
     records[name] = value;
     store(`glitch-feed-${name}`, value);
+    if (name === 'news') openPendingArticle();
   } catch {
     if (records[name]) records[name].stale = true;
     else {
@@ -214,6 +219,14 @@ function updateStatuses() {
 }
 
 function resetTimer() { elapsed = 0; started = performance.now(); }
+function openPendingArticle() {
+  if (!pendingArticle) return;
+  const index = screens.findIndex((screen) => screen.panel === 'article');
+  if (index !== -1) {
+    pendingArticle = false;
+    showPanel(index);
+  }
+}
 function showPanel(index) {
   if (index >= screens.length) {
     if (records.news) {
@@ -225,6 +238,9 @@ function showPanel(index) {
   }
   current = (index + screens.length) % screens.length;
   const screen = screens[current];
+  document.body.dataset.view = screen.panel;
+  document.querySelector('.masthead').inert = screen.panel === 'article';
+  document.querySelector('.footer').inert = screen.panel === 'article';
   panels.forEach((name) => {
     const active = name === screen.panel;
     $(name).classList.toggle('active', active);
@@ -234,6 +250,7 @@ function showPanel(index) {
   document.querySelectorAll('[data-panel]').forEach((button) => button.setAttribute('aria-current', String(button.dataset.panel === screen.panel)));
   if (screen.panel === 'article') renderArticle(screen);
   if (screen.panel === 'quote') { refresh('quote'); requestAnimationFrame(fitQuote); }
+  history.replaceState(null, '', `#${screen.panel}`);
   resetTimer();
 }
 function setPaused(value) {
@@ -242,6 +259,7 @@ function setPaused(value) {
   else started = performance.now();
   paused = value;
   $('pause').textContent = paused ? 'Resume' : 'Pause';
+  $('paper-pause').textContent = paused ? 'Resume' : 'Pause';
   $('pause').setAttribute('aria-label', paused ? 'Resume rotation' : 'Pause rotation');
 }
 function tick() {
@@ -250,6 +268,7 @@ function tick() {
   if (used >= total && !paused) { showPanel(current + 1); used = 0; }
   $('countdown').textContent = paused ? 'Ⅱ' : `${Math.max(0, Math.ceil((total - used) / 1000))}s`;
   $('progress').style.transform = `scaleX(${Math.min(1, used / total)})`;
+  $('article-progress').style.transform = $('progress').style.transform;
 }
 function updateClock() {
   const now = new Date();
@@ -265,15 +284,24 @@ document.querySelectorAll('[data-panel]').forEach((button) => button.addEventLis
   if (index !== -1) showPanel(index);
 }));
 $('pause').addEventListener('click', () => setPaused(!paused));
+$('paper-pause').addEventListener('click', () => setPaused(!paused));
+$('paper-back').addEventListener('click', () => showPanel(0));
+$('paper-previous').addEventListener('click', () => showPanel(current - 1));
+$('paper-next').addEventListener('click', () => showPanel(current + 1));
+$('paper-settings').addEventListener('click', () => $('settings').click());
 async function toggleFullscreen() {
   try {
     if (document.fullscreenElement) await document.exitFullscreen();
     else await document.documentElement.requestFullscreen();
   } catch { $('fullscreen').textContent = 'Use browser fullscreen'; }
 }
-if (!document.fullscreenEnabled) $('fullscreen').hidden = true;
+if (!document.fullscreenEnabled) {
+  $('fullscreen').hidden = true;
+  $('paper-fullscreen').hidden = true;
+}
 document.querySelector('[data-panel=article]').disabled = true;
 $('fullscreen').addEventListener('click', toggleFullscreen);
+$('paper-fullscreen').addEventListener('click', toggleFullscreen);
 let wasPaused = false;
 $('settings').addEventListener('click', () => {
   wasPaused = paused;
@@ -296,14 +324,23 @@ $('settings-dialog').addEventListener('close', () => {
   setPaused(wasPaused);
 });
 document.addEventListener('keydown', (event) => {
-  if ($('settings-dialog').open || /INPUT|SELECT|TEXTAREA|BUTTON|A/.test(event.target.tagName)) return;
-  if (event.key === 'ArrowRight') showPanel(current + 1);
-  else if (event.key === 'ArrowLeft') showPanel(current - 1);
-  else if (event.code === 'Space') { event.preventDefault(); setPaused(!paused); }
+  if ($('settings-dialog').open || /INPUT|SELECT|TEXTAREA/.test(event.target.tagName)) return;
+  if (event.key === 'ArrowRight') { event.preventDefault(); showPanel(current + 1); }
+  else if (event.key === 'ArrowLeft') { event.preventDefault(); showPanel(current - 1); }
+  else if (event.code === 'Space' && !/BUTTON|A/.test(event.target.tagName)) { event.preventDefault(); setPaused(!paused); }
   else if (event.key.toLowerCase() === 'f') toggleFullscreen();
   else if (event.key.toLowerCase() === 's') $('settings').click();
 });
 window.addEventListener('resize', () => { fitQuote(); fitArticle(); });
+window.addEventListener('hashchange', () => {
+  if (location.hash === '#article') {
+    pendingArticle = true;
+    openPendingArticle();
+  } else {
+    const index = screens.findIndex((screen) => `#${screen.panel}` === location.hash);
+    if (index !== -1) showPanel(index);
+  }
+});
 if (document.fonts) document.fonts.ready.then(() => { fitQuote(); fitArticle(); });
 
 async function init() {
@@ -314,7 +351,11 @@ async function init() {
     // Weather cache belongs to a specific location/configuration.
     const configKey = JSON.stringify(config);
     if (cached && cached.data && cached.updated_at && (name !== 'weather' || cached.configKey === configKey)) {
-      try { renderers[name](cached.data); records[name] = { ...cached, stale: true }; } catch { /* Ignore invalid caches. */ }
+      try {
+        renderers[name](cached.data);
+        records[name] = { ...cached, stale: true };
+        if (name === 'news') openPendingArticle();
+      } catch { /* Ignore invalid caches. */ }
     }
     refresh(name);
   }

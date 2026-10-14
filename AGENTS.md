@@ -11,6 +11,9 @@ CSS, and JavaScript. `make run`, `make test`, and `make check` are entrypoints.
 - Newspaper pages use RSS headlines, images/captions/credits, and short
   descriptions. Full article bodies are unavailable; the user chose this
   simplified format instead of bullet summaries and article text.
+- Approved newspaper design: full-height, uncropped square photo on the left,
+  cream newspaper column on the right. No dashboard chrome taking photo space.
+  Use `/#article` for direct access; maintain story controls and portrait fallback.
 - Display loading, unavailable, and stale states honestly; do not present sample
   content as live data.
 - Keep upstream refresh intervals independent from panel rotation.

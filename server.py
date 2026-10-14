@@ -159,6 +159,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def end_headers(self):
+        if not urllib.parse.urlparse(self.path).path.startswith("/api/"):
+            self.send_header("Cache-Control", "no-cache")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()

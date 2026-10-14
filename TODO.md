@@ -14,6 +14,10 @@
   headline, short description, byline, credit, and original article link.
 - [x] Rotate through the overview's stories before weather/quote; keep the
   current edition stable during feed refreshes.
+- [x] Implement the approved full-height square-photo newspaper design, with
+  full-color uncropped images, cream text column, and portrait fallback.
+- [x] Add direct story link, in-story controls, fresh asset loading, and tests
+  exercising actual app rotation and navigation.
 - [ ] Refine similarity thresholds against additional real news examples.
 - [ ] Refine news categories and sources with the user.
 - [ ] Refine visual styling with the user.
