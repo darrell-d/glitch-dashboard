@@ -93,11 +93,16 @@ test('direct story URL opens a photo page once feed data is available', async ()
 
 test('weather renders night-aware central imagery and five forecast icons', async () => {
   const weather = { current: { temperature_2m: 68, apparent_temperature: 68, weather_code: 0,
-    is_day: 0, relative_humidity_2m: 85, wind_speed_10m: 9 }, daily: {
+    is_day: 0, relative_humidity_2m: 85, wind_speed_10m: 9 }, hourly: {
+    time: Array.from({ length: 12 }, (_, i) => `2026-10-14T${String(i + 10).padStart(2, '0')}:00`),
+    temperature_2m: Array.from({ length: 12 }, (_, i) => 68 + i),
+    weather_code: [0, 1, 2, 3, 51, 61, 80, 0, 1, 2, 3, 45],
+    precipitation_probability: [0, 1, 2, 4, 12, 35, 50, 20, 10, 5, 3, 2],
+    is_day: [1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0] }, daily: {
     time: ['2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'],
     temperature_2m_max: [70, 72, 68, 65, 66], temperature_2m_min: [50, 52, 48, 45, 46], weather_code: [0, 2, 3, 61, 95] } };
   const screen = await app('', { weather });
-  const [summary, forecast] = screen.elements['weather-content'].children;
+  const [summary, hourly, forecast] = screen.elements['weather-content'].children;
   assert.equal(summary.children[1].dataset.kind, 'moon');
   assert.match(summary.children[1].innerHTML, /#moon/);
   assert.match(summary.children[1].attributes['aria-label'], /night/);
@@ -106,6 +111,9 @@ test('weather renders night-aware central imagery and five forecast icons', asyn
   const moon = summary.children[2].children[2];
   assert.equal(moon.className, 'moon-phase');
   assert.match(moon.attributes['aria-label'], /^Moon: /);
+  assert.equal(hourly.children[1].children.length, 12);
+  assert.equal(hourly.children[1].children[0].children[0].textContent, 'NOW');
+  assert.match(hourly.children[1].children[5].attributes['aria-label'], /35% chance of precipitation/);
 });
 
 test('display markup has no app header, story count, article link, or quote collection link', () => {

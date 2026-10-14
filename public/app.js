@@ -37,6 +37,11 @@ function node(tag, className, text) {
 }
 function number(value) { return Number.isFinite(value) ? Math.round(value) : '–'; }
 function celsius(value) { return number((value - 32) * 5 / 9); }
+function displayHour(stamp, index) {
+  if (index === 0) return 'NOW';
+  const hour = Number(stamp.slice(11, 13));
+  return Number.isInteger(hour) ? `${hour % 12 || 12}${hour < 12 ? 'A' : 'P'}` : '—';
+}
 const condition = WeatherVisual.description;
 
 function renderNews(data) {
@@ -105,7 +110,7 @@ function fitArticle() {
 }
 
 function renderWeather(data) {
-  const { current: now, daily } = data;
+  const { current: now, hourly, daily } = data;
   $('weather-heading').textContent = config.location;
   const content = $('weather-content');
   const summary = node('div', 'weather-now');
@@ -136,6 +141,25 @@ function renderWeather(data) {
   lunar.append(disc, lunarText);
   conditions.append(details, lunar);
   summary.append(temperatures, illustration, conditions);
+  const hourlySection = node('section', 'hourly-section');
+  hourlySection.setAttribute('aria-label', 'Next 12 hours');
+  hourlySection.append(node('div', 'hourly-label', 'NEXT 12 HOURS'));
+  const hourlyForecast = node('div', 'hourly-forecast');
+  hourly.time.slice(0, 12).forEach((stamp, i) => {
+    const code = hourly.weather_code[i];
+    const rain = number(hourly.precipitation_probability[i]);
+    const hour = node('div', 'hourly-hour');
+    hour.setAttribute('aria-label', `${displayHour(stamp, i)}: ${condition(code)}, ${number(hourly.temperature_2m[i])}°F, ${rain}% chance of precipitation`);
+    const icon = node('div', 'hourly-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.innerHTML = WeatherVisual.icon(code, hourly.is_day[i] !== 0);
+    const rainChance = node('div', 'hourly-rain', `${rain}%`);
+    if (rain >= 30) rainChance.dataset.wet = 'true';
+    hour.append(node('div', 'hourly-time', displayHour(stamp, i)), icon,
+      node('div', 'hourly-temp', `${number(hourly.temperature_2m[i])}°`), rainChance);
+    hourlyForecast.append(hour);
+  });
+  hourlySection.append(hourlyForecast);
   const forecast = node('div', 'forecast');
   daily.time.forEach((day, i) => {
     const column = node('div', 'forecast-day');
@@ -152,7 +176,7 @@ function renderWeather(data) {
       node('div', 'forecast-condition', condition(daily.weather_code[i])));
     forecast.append(column);
   });
-  content.replaceChildren(summary, forecast);
+  content.replaceChildren(summary, hourlySection, forecast);
 }
 
 function fitQuote() {

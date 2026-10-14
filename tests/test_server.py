@@ -96,7 +96,7 @@ class AdapterTests(unittest.TestCase):
             parse_quote(b'{"error":"No quote available"}')
 
     def test_weather_rejects_null_current_data(self):
-        raw = {"current": {"temperature_2m": None}, "daily": {}}
+        raw = {"current": {"temperature_2m": None}, "hourly": {}, "daily": {}}
         with self.assertRaises(ValueError):
             parse_weather(json.dumps(raw))
 
@@ -104,6 +104,22 @@ class AdapterTests(unittest.TestCase):
         url = weather_url(39.95, -75.16, "America/New_York")
         self.assertIn("temperature_unit=fahrenheit", url)
         self.assertIn("forecast_days=5", url)
+        self.assertIn("forecast_hours=12", url)
+        self.assertIn("precipitation_probability", url)
+
+    def test_weather_includes_complete_hourly_forecast(self):
+        raw = {
+            "current": {"temperature_2m": 70, "apparent_temperature": 70,
+                        "relative_humidity_2m": 55, "weather_code": 1,
+                        "wind_speed_10m": 8, "is_day": 1},
+            "hourly": {"time": [f"2026-10-14T{hour:02d}:00" for hour in range(12)],
+                       "temperature_2m": [70] * 12, "weather_code": [1] * 12,
+                       "precipitation_probability": [10] * 12, "is_day": [1] * 12},
+            "daily": {"time": ["2026-10-14"], "temperature_2m_max": [75],
+                      "temperature_2m_min": [55], "weather_code": [1]},
+        }
+        parsed = parse_weather(json.dumps(raw))
+        self.assertEqual(len(parsed["hourly"]["time"]), 12)
 
 
 if __name__ == "__main__":

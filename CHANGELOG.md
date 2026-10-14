@@ -15,6 +15,8 @@
   day/night-aware clear skies; move weather attribution into Settings.
 - Add a compact moon-phase disc, phase name, and illuminated percentage to weather,
   calculated locally without another runtime API dependency.
+- Add a secondary 12-hour forecast with local time, condition icon, temperature,
+  and precipitation probability while retaining current temperature as the focus.
 - Remove weather provider/Outside labels and quote collection/source links.
 - Add CNN, Kotaku, WSJ World News, The Atlantic, POLITICO, WIRED, Ars Technica,
   TechCrunch, and The New Yorker alongside NYT, selecting four stories each.

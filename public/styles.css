@@ -20,7 +20,7 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .weather-heading-row { display:flex; justify-content:space-between; align-items:center; gap:24px; }
 .clock { display:flex; gap:20px; font-size:clamp(12px,1vw,22px); color:var(--dim); }
 #clock { color:var(--text); font-variant-numeric:tabular-nums; }
-.weather-content { flex:1; min-height:0; display:grid; grid-template-rows:minmax(0,1fr) auto; gap:3vh; }
+.weather-content { flex:1; min-height:0; display:grid; grid-template-rows:minmax(0,1fr) auto auto; gap:1.8vh; }
 .weather-now { display:grid; grid-template-columns:.9fr 1.25fr 1fr; align-items:center; gap:2vw; min-height:0; }
 .temperature { font-size:clamp(88px,14vw,310px); font-weight:500; line-height:.9; letter-spacing:-.08em; }
 .temperature small { font-size:.22em; vertical-align:top; letter-spacing:0; margin-left:.4em; line-height:2; }
@@ -39,9 +39,20 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .moon-disc[data-phase=waning-gibbous] { background:radial-gradient(circle at 150% 50%,#101815 0 72%,transparent 73%),#dce7d6; }
 .moon-name { color:var(--text); font-size:clamp(12px,1vw,21px); }
 .moon-illumination { font-size:clamp(10px,.8vw,16px); margin-top:2px; }
-.weather-art { justify-self:center; width:min(35vw,52vh); width:min(35vw,52dvh); aspect-ratio:1; border-radius:50%; background:radial-gradient(circle,#8ca9bb12,transparent 65%); }
+.weather-art { justify-self:center; width:min(32vw,44vh); width:min(32vw,44dvh); aspect-ratio:1; border-radius:50%; background:radial-gradient(circle,#8ca9bb12,transparent 65%); }
 .weather-art[data-kind=sun],.weather-art[data-kind=partly-day] { background:radial-gradient(circle,#eab65518,transparent 65%); }
 .weather-art svg { display:block; width:100%; height:100%; filter:drop-shadow(0 16px 35px #8fa8b122); }
+.hourly-section { min-width:0; }
+.hourly-label { color:var(--dim); font-size:clamp(10px,.7vw,15px); letter-spacing:.12em; margin-bottom:.7vh; }
+.hourly-forecast { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.hourly-hour { min-width:0; display:grid; justify-items:center; grid-template-rows:auto auto auto auto; gap:2px; padding:.8vh .35vw; border-left:1px solid var(--line); }
+.hourly-hour:first-child { border-left:0; }
+.hourly-time { color:var(--dim); font-size:clamp(9px,.72vw,15px); font-weight:600; letter-spacing:.05em; }
+.hourly-icon { width:clamp(28px,2.8vw,54px); }
+.hourly-icon svg { display:block; width:100%; aspect-ratio:1; }
+.hourly-temp { font-size:clamp(14px,1.25vw,26px); }
+.hourly-rain { color:var(--dim); font-size:clamp(9px,.68vw,14px); }
+.hourly-rain[data-wet=true] { color:#86c8db; }
 .forecast { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); border-top:1px solid var(--line); padding-top:2.2vh; }
 .forecast-day { display:grid; grid-template-columns:1fr auto; align-items:center; padding:0 1.5vw; border-left:1px solid var(--line); min-width:0; }
 .forecast-day:first-child { padding-left:0; border:0; }
@@ -81,13 +92,17 @@ dialog p { color:var(--dim); font-size:13px; line-height:1.6; }
   .weather-heading-row { align-items:flex-start; gap:12px; }
   .clock { gap:4px; flex-direction:column; align-items:flex-end; }
   .weather-now { grid-template-columns:1fr 1fr; gap:8px; }
-  .weather-art { grid-column:1 / -1; grid-row:2; width:min(34vh,65vw); }
+  .weather-art { grid-column:1 / -1; grid-row:2; width:min(28vh,58vw); }
   .temperature { font-size:clamp(70px,18vw,125px); }
   .condition-label { font-size:26px; }
   .weather-detail { font-size:11px; }
   .moon-phase { gap:8px; }
   .moon-name { font-size:11px; }
   .moon-illumination { font-size:9px; }
+  .hourly-forecast { grid-template-columns:repeat(6,minmax(0,1fr)); }
+  .hourly-hour:nth-child(7) { border-left:0; }
+  .hourly-hour:nth-child(n+7) { border-top:1px solid var(--line); }
+  .hourly-icon { width:32px; }
   .forecast-day { padding:0 5px; display:flex; flex-direction:column; align-items:flex-start; }
   .forecast-icon { width:40px; }
   .forecast-temp { font-size:18px; }
@@ -102,12 +117,16 @@ dialog p { color:var(--dim); font-size:13px; line-height:1.6; }
 @media(max-height:550px) and (min-aspect-ratio:1/1) {
   .panel { padding:18px 4vw 70px; }
   h1 { font-size:36px; }
-  .weather-content { gap:10px; }
+  .weather-content { gap:7px; }
   .temperature { font-size:80px; }
   .celsius { font-size:24px; margin-top:8px; }
-  .weather-art { width:35vh; }
+  .weather-art { width:28vh; }
   .condition-label { font-size:28px; }
   .moon-phase { margin-top:6px; padding-top:6px; }
+  .hourly-label { margin-bottom:2px; }
+  .hourly-hour { padding:2px; }
+  .hourly-icon { width:26px; }
+  .hourly-rain { display:none; }
   .forecast { padding-top:10px; }
   .forecast-icon { width:36px; }
   .forecast-temp { font-size:22px; }

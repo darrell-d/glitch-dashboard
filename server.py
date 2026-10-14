@@ -66,16 +66,17 @@ def weather_url(latitude, longitude, timezone_name):
     query = urllib.parse.urlencode({
         "latitude": latitude, "longitude": longitude,
         "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day",
+        "hourly": "temperature_2m,weather_code,precipitation_probability,is_day",
         "daily": "weather_code,temperature_2m_max,temperature_2m_min",
         "temperature_unit": "fahrenheit", "wind_speed_unit": "mph",
-        "timezone": timezone_name, "forecast_days": 5,
+        "timezone": timezone_name, "forecast_days": 5, "forecast_hours": 12,
     })
     return "https://api.open-meteo.com/v1/forecast?" + query
 
 
 def parse_weather(raw):
     data = json.loads(raw)
-    current, daily = data["current"], data["daily"]
+    current, hourly, daily = data["current"], data["hourly"], data["daily"]
     for key in ("temperature_2m", "apparent_temperature", "relative_humidity_2m", "weather_code", "wind_speed_10m"):
         if not isinstance(current[key], (float, int)) or not math.isfinite(current[key]):
             raise ValueError("Missing current weather")
@@ -83,7 +84,11 @@ def parse_weather(raw):
         "temperature_2m_max", "temperature_2m_min", "weather_code"
     )):
         raise ValueError("Incomplete forecast")
-    return {"current": current, "daily": daily}
+    if len(hourly["time"]) < 12 or any(len(hourly[key]) != len(hourly["time"]) for key in (
+        "temperature_2m", "weather_code", "precipitation_probability", "is_day"
+    )):
+        raise ValueError("Incomplete hourly forecast")
+    return {"current": current, "hourly": hourly, "daily": daily}
 
 
 class Feed:

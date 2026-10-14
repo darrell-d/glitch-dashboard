@@ -26,6 +26,8 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   forecast icons. No provider/Outside labels on the screen; attribution in Settings.
 - Weather also shows a secondary locally calculated moon phase and illumination;
   keep it visually subordinate to current temperature and conditions.
+- Weather includes a compact next-12-hours strip with time, condition, Fahrenheit
+  temperature, and precipitation probability; keep the current reading dominant.
 - Quote pages use the editorial-rule layout without a quotation-mark glyph,
   collection labels, or darrelld.com links.
 - Display loading, unavailable, and stale states honestly; do not present sample
