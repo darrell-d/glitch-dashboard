@@ -50,6 +50,8 @@
 
 ### Bugfixes
 
+- Add breathing room above the hourly forecast, remove its redundant lower rule,
+  and replace the crescent gradient with a clipped mask that has no false lit edge.
 - Allow arrow-key story navigation while buttons have focus and revalidate
   static assets on refresh so local UI changes load consistently.
 - Handle missing or failed story images with a text-focused newspaper layout.
