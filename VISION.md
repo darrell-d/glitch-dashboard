@@ -64,6 +64,8 @@ Persistent navigation and application chrome should stay out of the composition.
 
 - News stories.
 - Current, hourly, and multi-day weather.
+- A regional weather map with animated precipitation radar and current
+  temperatures for surrounding cities.
 - Weather-related conditions such as air quality, smoke, pollen, and advisories.
 - Future household information that benefits from passive viewing.
 
@@ -119,8 +121,10 @@ screen module when tighter lifecycle or performance control is worthwhile.
    renderer.
 4. Add more mathematical and procedural screens behind the same interface.
 5. Add weather-event data after selecting its visual treatment and providers.
-6. Harden startup, recovery, caching, and diagnostics for unattended use.
-7. Optimize rendering and kiosk setup for the selected monitor and playback device.
+6. Add a full-screen regional radar screen centered on Philadelphia, with a
+   time legend and surrounding-city temperature labels.
+7. Harden startup, recovery, caching, and diagnostics for unattended use.
+8. Optimize rendering and kiosk setup for the selected monitor and playback device.
 
 ## Open Decisions
 

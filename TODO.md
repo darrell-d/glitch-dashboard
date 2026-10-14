@@ -11,6 +11,7 @@
 - [x] Polish hourly spacing/dividers and correct crescent phase masking.
 - [x] Use Meteocons with weekly style rotation, a settings override, and a configurable monochrome color.
 - [ ] Add air quality, smoke, pollen, and other local weather-event data after choosing a layout.
+- [ ] Add a full-screen Philadelphia regional map with animated precipitation radar and surrounding-city temperatures.
 
 - [ ] Replace the fixed panel sequence with an extensible screen registry and lifecycle hooks.
 - [ ] Add `/Users/darrelldefreitas/code/gen_art/LawnMower` as an autonomous full-screen web screen.

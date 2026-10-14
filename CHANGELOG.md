@@ -6,6 +6,8 @@
 
 - Document the long-term magic-mirror vision, including unattended operation,
   full-resolution presentation, generative-art screens, and an extensible screen lifecycle.
+- Add regional animated radar and surrounding-city temperatures to the planned
+  magic-mirror screen collection.
 - Replace the local weather symbols with animated Meteocons and rotate among
   Fill, Flat, Line, and Monochrome each week, with persistent style and
   monochrome-color controls in Settings.
