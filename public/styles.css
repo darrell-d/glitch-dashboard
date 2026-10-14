@@ -76,14 +76,10 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .radar-precipitation { opacity:0; }
 .radar-precipitation.active { opacity:.78; }
 .radar-shade { position:absolute; inset:0; background:linear-gradient(180deg,#0b1415cc 0,#0b141533 24%,transparent 55%,#0b14158c 100%); pointer-events:none; }
-.radar-header { position:absolute; z-index:2; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:flex-start; gap:3vw; padding:clamp(28px,4vh,64px) clamp(28px,4.5vw,100px); text-shadow:0 2px 18px #000; }
-.radar-kicker { color:var(--accent); font-size:clamp(10px,.8vw,17px); font-weight:700; letter-spacing:.18em; }
-.radar-header h1 { font-size:clamp(44px,6vw,128px); }
-.radar-header p { margin:.8vh 0 0; color:#d1d9d1; font-size:clamp(13px,1vw,22px); }
-.radar-time { text-align:right; font-weight:700; letter-spacing:.08em; font-size:clamp(12px,1vw,22px); }
+.radar-time { position:absolute; z-index:2; top:clamp(28px,4vh,64px); right:clamp(28px,4.5vw,100px); text-align:right; font-weight:700; letter-spacing:.08em; font-size:clamp(12px,1vw,22px); text-shadow:0 2px 18px #000; }
 .radar-time span { display:block; color:var(--dim); font-size:.65em; margin-bottom:5px; }
 .radar-time time { font-variant-numeric:tabular-nums; }
-.radar-legend { position:absolute; z-index:2; top:clamp(104px,16vh,210px); right:clamp(28px,4.5vw,100px); display:flex; align-items:center; gap:0; padding:9px 12px; background:#0d1615cc; border:1px solid #ffffff24; border-radius:3px; color:#d9e0d9; font-size:clamp(9px,.7vw,14px); box-shadow:0 8px 30px #0005; }
+.radar-legend { position:absolute; z-index:2; top:clamp(92px,11vh,150px); right:clamp(28px,4.5vw,100px); display:flex; align-items:center; gap:0; padding:9px 12px; background:#0d1615cc; border:1px solid #ffffff24; border-radius:3px; color:#d9e0d9; font-size:clamp(9px,.7vw,14px); box-shadow:0 8px 30px #0005; }
 .radar-legend i { width:clamp(16px,1.5vw,32px); height:clamp(12px,1.2vw,24px); }
 .radar-legend i:nth-of-type(1) { margin-left:8px; background:#1fbc32; }
 .radar-legend i:nth-of-type(2) { background:#11832b; }
@@ -97,7 +93,6 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .radar-temperature span { display:block; max-width:150px; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#bcc8c0; font-size:clamp(9px,.7vw,14px); }
 .radar-temperature.home { border-color:var(--accent); color:var(--accent); }
 .radar-temperature.home::after { content:''; position:absolute; left:50%; bottom:-13px; width:2px; height:12px; background:var(--accent); }
-.radar-attribution { position:absolute; z-index:2; right:clamp(24px,4.5vw,100px); bottom:72px; padding:5px 8px; background:#0b1415b8; color:#aab6ae; font-size:10px; }
 .radar-bottom { position:absolute; z-index:2; left:clamp(24px,4.5vw,100px); bottom:76px; color:#c2ccc5; font-size:clamp(10px,.8vw,16px); text-shadow:0 2px 8px #000; }
 .quote-content { flex:1; min-height:0; display:flex; align-items:center; padding:5vh 8vw 4vh; overflow:hidden; }
 .quote-lockup { width:100%; max-width:1500px; border-left:2px solid var(--accent); padding-left:clamp(28px,4vw,80px); }
@@ -153,10 +148,9 @@ dialog p { color:var(--dim); font-size:13px; line-height:1.6; }
   .controls { gap:9px; }
   .controls button { font-size:10px; }
   .countdown { display:none; }
-  .radar-header { padding:24px; }
+  .radar-time { top:24px; right:24px; }
   .radar-legend { top:115px; right:24px; }
   .radar-temperature { min-width:68px; padding:5px 7px; }
-  .radar-attribution { right:24px; bottom:68px; }
   .radar-bottom { left:24px; bottom:72px; }
 }
 @media(max-height:550px) and (min-aspect-ratio:1/1) {

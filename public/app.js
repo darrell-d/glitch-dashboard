@@ -229,8 +229,6 @@ function renderRadar(data) {
     return { layer, time: frame.time };
   });
   map.replaceChildren(base, ...radarFrames.map((frame) => frame.layer));
-  $('radar-heading').textContent = `${config.location} radar`;
-  $('radar-location').textContent = `${config.region ? `${config.region} · ` : ''}${config.postal_code}`;
   const labels = [];
   const currentTemperature = records.weather?.data?.current?.temperature_2m;
   if (Number.isFinite(currentTemperature)) {
@@ -298,7 +296,7 @@ async function refresh(name) {
     else {
       const messages = { news: 'Headlines are temporarily unavailable.', weather: 'Weather is temporarily unavailable.', radar: 'Regional radar is temporarily unavailable.', quote: 'The quote collection is temporarily unavailable.' };
       if (name === 'quote') $('quote-text').textContent = messages[name];
-      else if (name === 'radar') $('radar-heading').textContent = messages[name];
+      else if (name === 'radar') $('radar-status').textContent = messages[name];
       else $(name === 'news' ? 'headlines' : 'weather-content').replaceChildren(node('p', 'placeholder', messages[name]));
     }
   } finally {
@@ -432,8 +430,6 @@ $('settings-dialog').addEventListener('close', async () => {
           delete records.radar;
           $('weather-heading').textContent = config.location;
           $('weather-content').replaceChildren(node('p', 'placeholder', 'Updating local weather…'));
-          $('radar-heading').textContent = `${config.location} radar`;
-          $('radar-location').textContent = `${config.region ? `${config.region} · ` : ''}${config.postal_code}`;
           $('radar-map').replaceChildren();
           $('radar-temperatures').replaceChildren();
         } catch {

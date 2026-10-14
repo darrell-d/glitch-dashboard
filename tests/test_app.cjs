@@ -171,10 +171,14 @@ test('radar screen is centered on the configured ZIP and has live map layers', a
   const screen = await app();
   screen.run("showPanel(screens.findIndex((screen) => screen.panel === 'radar'))");
   assert.equal(screen.elements.radar.classList.contains('active'), true);
-  assert.equal(screen.elements['radar-heading'].textContent, 'Philadelphia radar');
-  assert.match(screen.elements['radar-location'].textContent, /19103/);
   assert.ok(screen.elements['radar-map'].children.length >= 2);
   assert.equal(screen.elements['radar-temperatures'].children[0].children[1].textContent, 'Wings Field');
+});
+
+test('radar display omits the title block and visible provider credit line', () => {
+  const markup = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+  const radar = markup.match(/<section[^>]+id="radar"[\s\S]*?<\/section>/)[0];
+  assert.doesNotMatch(radar, /Philadelphia radar|REGIONAL WEATHER|radar-heading|radar-attribution|OpenStreetMap contributors|RainViewer/);
 });
 
 test('progress advances on animation frames between seconds, freezes on pause, and resumes', async () => {

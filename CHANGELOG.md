@@ -62,6 +62,8 @@
 
 ### Bugfixes
 
+- Remove the radar title block and on-map provider credit line so the weather map
+  and temperature markers use the full visual field; retain provider details in Settings.
 - Tighten the Fahrenheit/Celsius grouping to create breathing room above the
   hourly forecast, remove its redundant lower rule, and replace the crescent
   gradient with a clipped mask that has no false lit edge.

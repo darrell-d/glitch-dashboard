@@ -53,8 +53,8 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   Data and icon attribution is in Settings instead of on the weather screen.
 - **Regional radar:** A full-screen map centered on the selected ZIP, with four
   recent precipitation frames animated over OpenStreetMap and current temperatures
-  at nearby NWS reporting locations. Map and radar attribution remain visible on
-  the screen. Missing radar data does not stop the rest of the rotation.
+  at nearby NWS reporting locations. Provider details remain in Settings so the
+  map itself stays visually quiet. Missing radar data does not stop the rest of the rotation.
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`, set in
   an editorial lockup with a vertical accent rule and the author below a fine rule.
 
