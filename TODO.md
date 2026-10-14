@@ -1,6 +1,6 @@
 # TODO
 
-- [x] Rename masthead to The Daily with styled editorial typography.
+- [x] Rename masthead to The Daily and set it in Jacquard 24.
 - [x] Add blurred photo fill behind uncropped story images.
 - [x] Remove all navigation dots; retain rotation, keyboard navigation, and controls.
 - [x] Remove app header, article counts/links, and redundant source/collection labels.

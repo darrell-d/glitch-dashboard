@@ -30,7 +30,7 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   and footer do not consume photo space. Portrait layouts stack the photo and
   story. Non-square photos sit uncropped over a blurred enlarged copy of the
   same image, replacing empty letterbox bands. The masthead reads "The Daily"
-  in italic Bodoni Moda, with Didot/Georgia fallbacks. Story counts and outbound
+  in Jacquard 24, with Georgia as the local fallback. Story counts and outbound
   article links are omitted from the display. Only short descriptions are shown, with no invented
   article text or generated bullet summaries. Stories with missing or failed
   images use a text-focused layout.

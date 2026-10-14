@@ -4,7 +4,7 @@
 
 ### Features
 
-- Rename the masthead The Daily with italic Bodoni typography and remove the
+- Rename the masthead The Daily with Jacquard 24 typography and remove the
   global header, story count, outbound article link, and visible section labels.
 - Fill photo letterboxing with a blurred enlarged copy of the uncropped image.
 - Remove navigation dots from every screen; retain automatic rotation, keyboard

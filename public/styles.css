@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@1,600&family=DM+Sans:wght@400;500;600;700&family=Libre+Caslon+Display&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Jacquard+24&family=Libre+Caslon+Display&display=swap');
 
 :root { color-scheme:dark; --bg:#101815; --text:#f0f0df; --dim:#9da99d; --accent:#c6f294; --line:#334035; --sans:'DM Sans',system-ui,sans-serif; --serif:'Libre Caslon Display',Georgia,serif; }
 * { box-sizing:border-box; }
