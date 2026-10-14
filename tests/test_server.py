@@ -41,7 +41,35 @@ class AdapterTests(unittest.TestCase):
           <item><title>A &amp; B</title><link>https://www.nytimes.com/a</link></item>
           <item><title>Unsafe</title><link>javascript:alert(1)</link></item>
         </channel></rss>''')
-        self.assertEqual(result["items"], [{"title": "A & B", "url": "https://www.nytimes.com/a", "published": None}])
+        self.assertEqual(len(result["items"]), 1)
+        item = result["items"][0]
+        self.assertEqual(item["title"], "A & B")
+        self.assertEqual(item["url"], "https://www.nytimes.com/a")
+        self.assertIsNone(item["published"])
+        self.assertEqual(item["image_url"], "")
+
+    def test_newspaper_metadata_and_html_description(self):
+        raw = b'''<rss xmlns:media="http://search.yahoo.com/mrss/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+          <channel><item><title>A dispatch</title><link>https://www.nytimes.com/a</link>
+          <description><![CDATA[<p>A <b>short</b> description &amp; context.</p>]]></description>
+          <dc:creator>Jane Reporter</dc:creator>
+          <media:content url="https://static01.nyt.com/image.jpg"/>
+          <media:description>A scene from the report.</media:description>
+          <media:credit>A Photographer/The New York Times</media:credit>
+          </item></channel></rss>'''
+        item = parse_news(raw)["items"][0]
+        self.assertEqual(item["description"], "A short description & context.")
+        self.assertEqual(item["author"], "Jane Reporter")
+        self.assertEqual(item["image_url"], "https://static01.nyt.com/image.jpg")
+        self.assertEqual(item["image_caption"], "A scene from the report.")
+        self.assertEqual(item["image_credit"], "A Photographer/The New York Times")
+        self.assertNotIn("categories", item)
+
+    def test_unsafe_image_is_not_exposed(self):
+        raw = b'''<rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>
+          <title>A dispatch</title><link>https://www.nytimes.com/a</link>
+          <media:content url="javascript:alert(1)"/></item></channel></rss>'''
+        self.assertEqual(parse_news(raw)["items"][0]["image_url"], "")
 
     def test_empty_feed_rejected(self):
         with self.assertRaises(ValueError):

@@ -10,6 +10,10 @@
 - [x] Add run instructions and focused automated checks.
 - [x] Filter related news companions; retain one article per inferred homepage
   story group, preserving feed priority.
+- [x] Keep headline overview and add newspaper pages with a large photo,
+  headline, short description, byline, credit, and original article link.
+- [x] Rotate through the overview's stories before weather/quote; keep the
+  current edition stable during feed refreshes.
 - [ ] Refine similarity thresholds against additional real news examples.
 - [ ] Refine news categories and sources with the user.
 - [ ] Refine visual styling with the user.

@@ -10,7 +10,7 @@ Requires Python 3.11 or newer. No Python packages or frontend build required.
 make run
 ```
 
-Open **http://localhost:8080**. Settings (bottom right) controls panel duration
+Open **http://localhost:8080**. Settings (bottom right) controls screen duration
 and fade, slide, or instant transitions. Defaults: 30 seconds, soft fade.
 Controls appear when hovering over or focusing the footer, and on small screens.
 
@@ -22,12 +22,25 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
 
 - **Headlines:** New York Times homepage RSS. Three headlines per news visit,
   advancing through up to 24 distinct story representatives. Related companions
-  are filtered out, preserving the first article in NYT's feed order. Links open
-  the original articles.
+  are filtered out, preserving the first article in NYT's feed order. Click a
+  headline to open its newspaper page.
+- **Newspaper:** A warm paper layout for each selected story, with a bold serif
+  headline, large image, short description, byline, publication date, and photo
+  credit. A link opens the original NYT article. The RSS source does not supply
+  full article bodies; descriptions are displayed as supplied, with no invented
+  article text or generated bullet summaries. Stories with missing or failed
+  images use a text-focused layout.
 - **Weather:** Philadelphia current conditions, Fahrenheit first with Celsius
   alongside; feels-like temperature and a five-day forecast in both units.
   Data from [Open-Meteo](https://open-meteo.com/).
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`.
+
+Each rotation shows **headline overview → its three newspaper pages → weather →
+quote**, then advances to the next batch of headlines. Every screen uses the
+configured duration (30 seconds by default). The edition's stories stay together
+while new feed data is held for the next overview, so a refresh does not replace
+an article midway through display. Newspaper navigation jumps to the first story
+in the current batch; arrow keys step through individual pages.
 
 The confirmed `_glitch` routes also include `/quote/json` (daily),
 `/quote/json/reminder/random` (reminder-enabled quotes), and equivalent `/quotes/`
@@ -99,11 +112,12 @@ variables; intentionally change the port binding if LAN access is needed.
 
 ```sh
 make test   # standard-library unit tests
-make check  # tests plus JavaScript syntax check (requires Node.js)
+make check  # tests, JavaScript syntax, and edition sequencing (requires Node.js)
 ```
 
 Automated checks cover feed adapters, cache TTL, outage retention, cooldown, and
-recovery, plus companion filtering and unrelated-story retention. Live page and
+recovery, companion filtering, unrelated-story retention, newspaper metadata,
+and edition sequencing across refreshes. Live page and
 all three API feeds were smoke-tested locally. Browser
 visual QA, physical monitor/casting behavior, and a Docker image build have not
 been performed. No deployment has been made.

@@ -8,6 +8,7 @@ import html
 import math
 import re
 from collections import Counter
+from html.parser import HTMLParser
 
 STOP_WORDS = set("""
 a an and are as at be been being but by can could did do does for from had has
@@ -16,6 +17,21 @@ not of on or our out over says said she so some than that the their them there
 these they this those through to too under up us was we were what when where
 which while who why will with would you your about after before new now then
 """.split())
+
+
+class PlainText(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts = []
+
+    def handle_data(self, data):
+        self.parts.append(data)
+
+
+def plain_text(value):
+    parser = PlainText()
+    parser.feed(value or "")
+    return " ".join(" ".join(parser.parts).split())
 
 
 def words(text):

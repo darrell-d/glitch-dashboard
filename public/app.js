@@ -2,6 +2,8 @@
 
 const $ = (id) => document.getElementById(id);
 const names = ['news', 'weather', 'quote'];
+const panels = ['news', 'article', 'weather', 'quote'];
+let screens = DashboardEdition.createEdition([]);
 const records = {};
 let config = { location: 'Philadelphia', timezone: 'America/New_York' };
 let options = { duration: 30, transition: 'fade' };
@@ -48,19 +50,70 @@ function condition(code) {
 }
 
 function renderNews(data) {
+  // Finish the current edition before replacing its article pages with new data.
+  if (screens[current].panel !== 'news') return;
+  screens = DashboardEdition.createEdition(data.items, newsOffset);
+  renderOverview();
+}
+
+function renderOverview() {
   const list = $('headlines');
   list.replaceChildren();
-  for (let i = 0; i < Math.min(3, data.items.length); i++) {
-    const index = (newsOffset + i) % data.items.length;
-    const item = data.items[index];
+  const items = screens[0].items;
+  items.forEach((item, i) => {
     const row = node('article', 'headline');
-    row.append(node('span', 'headline-number', String(index + 1).padStart(2, '0')));
-    const link = node('a', '', item.title);
-    if (item.url.startsWith('https://')) link.href = item.url;
-    link.target = '_blank';
-    link.rel = 'noopener';
-    row.append(link);
+    row.append(node('span', 'headline-number', String(i + 1).padStart(2, '0')));
+    const button = node('button', '', item.title);
+    button.type = 'button';
+    button.setAttribute('aria-label', `Open newspaper view: ${item.title}`);
+    button.addEventListener('click', () => showPanel(i + 1));
+    row.append(button);
     list.append(row);
+  });
+  document.querySelector('[data-panel=article]').disabled = !items.length;
+}
+
+function renderArticle(screen) {
+  const item = screen.item;
+  $('article-title').textContent = item.title;
+  $('article-author').textContent = item.author ? `By ${item.author}` : 'The New York Times';
+  $('article-excerpt').textContent = item.description || 'No description was supplied for this story. Read the original report at The New York Times.';
+  $('article-page').textContent = `DISPATCH ${String(screen.index + 1).padStart(2, '0')} / ${String(screen.count).padStart(2, '0')}`;
+  const published = new Date(item.published || NaN);
+  $('article-date').textContent = Number.isFinite(published.getTime())
+    ? new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: config.timezone }).format(published) : '';
+  $('article-date').dateTime = Number.isFinite(published.getTime()) ? published.toISOString() : '';
+  $('article-link').removeAttribute('href');
+  if (item.url.startsWith('https://')) $('article-link').href = item.url;
+  const image = $('article-image');
+  const hasImage = typeof item.image_url === 'string' && item.image_url.startsWith('https://');
+  $('article').classList.toggle('paper-no-image', !hasImage);
+  image.onerror = () => $('article').classList.add('paper-no-image');
+  image.alt = item.image_caption || item.title;
+  image.removeAttribute('src');
+  if (hasImage) image.src = item.image_url;
+  $('article-caption').textContent = item.image_caption || '';
+  $('article-credit').textContent = item.image_credit || '';
+  requestAnimationFrame(fitArticle);
+}
+
+function fitArticle() {
+  if (screens[current].panel !== 'article') return;
+  const title = $('article-title');
+  const excerpt = $('article-excerpt');
+  title.style.fontSize = '';
+  excerpt.style.fontSize = '';
+  // Preserve space for the photograph when an unusually long headline wraps.
+  let titleSize = parseFloat(getComputedStyle(title).fontSize);
+  while (title.offsetHeight > $('article').clientHeight * .24 && titleSize > 18) {
+    titleSize -= 1;
+    title.style.fontSize = `${titleSize}px`;
+  }
+  const column = excerpt.parentElement;
+  let size = parseFloat(getComputedStyle(excerpt).fontSize);
+  while (column.scrollHeight > column.clientHeight + 1 && size > 12) {
+    size -= 1;
+    excerpt.style.fontSize = `${size}px`;
   }
 }
 
@@ -157,23 +210,30 @@ function updateStatuses() {
     const stale = record.stale || age >= (name === 'quote' ? 3 : 15);
     $(`${name}-status`).textContent = `${stale ? 'Cached · ' : ''}Updated ${age < 1 ? 'just now' : `${age}m ago`}`;
   }
+  $('article-status').textContent = $('news-status').textContent;
 }
 
 function resetTimer() { elapsed = 0; started = performance.now(); }
 function showPanel(index) {
-  current = (index + names.length) % names.length;
-  names.forEach((name, i) => {
-    const active = i === current;
+  if (index >= screens.length) {
+    if (records.news) {
+      newsOffset = (newsOffset + Math.min(3, records.news.data.items.length)) % records.news.data.items.length;
+      screens = DashboardEdition.createEdition(records.news.data.items, newsOffset);
+      renderOverview();
+    }
+    index = 0;
+  }
+  current = (index + screens.length) % screens.length;
+  const screen = screens[current];
+  panels.forEach((name) => {
+    const active = name === screen.panel;
     $(name).classList.toggle('active', active);
     $(name).inert = !active;
     $(name).setAttribute('aria-hidden', String(!active));
   });
-  document.querySelectorAll('[data-panel]').forEach((button, i) => button.setAttribute('aria-current', String(i === current)));
-  if (current === 0 && records.news) {
-    newsOffset = (newsOffset + 3) % records.news.data.items.length;
-    renderNews(records.news.data);
-  }
-  if (current === 2) { refresh('quote'); requestAnimationFrame(fitQuote); }
+  document.querySelectorAll('[data-panel]').forEach((button) => button.setAttribute('aria-current', String(button.dataset.panel === screen.panel)));
+  if (screen.panel === 'article') renderArticle(screen);
+  if (screen.panel === 'quote') { refresh('quote'); requestAnimationFrame(fitQuote); }
   resetTimer();
 }
 function setPaused(value) {
@@ -200,7 +260,10 @@ function updateClock() {
   } catch { $('clock').textContent = now.toLocaleTimeString(); }
 }
 
-document.querySelectorAll('[data-panel]').forEach((button) => button.addEventListener('click', () => showPanel(Number(button.dataset.panel))));
+document.querySelectorAll('[data-panel]').forEach((button) => button.addEventListener('click', () => {
+  const index = screens.findIndex((screen) => screen.panel === button.dataset.panel);
+  if (index !== -1) showPanel(index);
+}));
 $('pause').addEventListener('click', () => setPaused(!paused));
 async function toggleFullscreen() {
   try {
@@ -209,6 +272,7 @@ async function toggleFullscreen() {
   } catch { $('fullscreen').textContent = 'Use browser fullscreen'; }
 }
 if (!document.fullscreenEnabled) $('fullscreen').hidden = true;
+document.querySelector('[data-panel=article]').disabled = true;
 $('fullscreen').addEventListener('click', toggleFullscreen);
 let wasPaused = false;
 $('settings').addEventListener('click', () => {
@@ -239,8 +303,8 @@ document.addEventListener('keydown', (event) => {
   else if (event.key.toLowerCase() === 'f') toggleFullscreen();
   else if (event.key.toLowerCase() === 's') $('settings').click();
 });
-window.addEventListener('resize', fitQuote);
-if (document.fonts) document.fonts.ready.then(fitQuote);
+window.addEventListener('resize', () => { fitQuote(); fitArticle(); });
+if (document.fonts) document.fonts.ready.then(() => { fitQuote(); fitArticle(); });
 
 async function init() {
   try { config = await request('/api/config'); } catch { /* Keep known initial defaults. */ }

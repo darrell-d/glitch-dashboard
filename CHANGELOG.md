@@ -4,6 +4,10 @@
 
 ### Features
 
+- Add individual newspaper-style story screens with warm paper, bold serif
+  headlines, large photos, short descriptions, bylines, dates, and photo credits.
+- Rotate headline overview, its article pages, weather, and quote; keep stories
+  stable during refresh and support opening a newspaper page from a headline.
 - Select one article per inferred homepage story group using dependency-free
   text similarity and NYT keyword metadata, retaining the first feed entry.
 - Add regression coverage for report/explainer pairs, differently worded
@@ -21,6 +25,8 @@
 - Bind localhost by default and keep license keys out of the application.
 
 ### Bugfixes
+
+- Handle missing or failed story images with a text-focused newspaper layout.
 
 ### Performance
 

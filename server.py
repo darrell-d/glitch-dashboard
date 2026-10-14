@@ -15,11 +15,12 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from news import select_stories
+from news import plain_text, select_stories
 
 ROOT = Path(__file__).parent
 NYT_URL = "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
 QUOTE_URL = "https://darrelld.com/quote/json/random"
+MEDIA_NS = {"media": "http://search.yahoo.com/mrss/"}
 
 
 def fetch(url):
@@ -38,6 +39,11 @@ def parse_news(raw):
         title = (item.findtext("title") or "").strip()
         link = (item.findtext("link") or "").strip()
         if title and urllib.parse.urlparse(link).scheme == "https":
+            description = plain_text(item.findtext("description") or "")
+            image = item.find("media:content", MEDIA_NS)
+            image_url = image.get("url", "") if image is not None else ""
+            if urllib.parse.urlparse(image_url).scheme != "https":
+                image_url = ""
             categories = []
             for category in item.findall("category"):
                 value = (category.text or "").strip()
@@ -45,12 +51,16 @@ def parse_news(raw):
                     kind = category.get("domain", "").rstrip("/").rsplit("/", 1)[-1]
                     categories.append((kind, value.casefold()))
             items.append({"title": title, "url": link, "published": item.findtext("pubDate"),
-                          "description": item.findtext("description") or "", "categories": categories})
+                          "description": description, "categories": categories,
+                          "author": plain_text(item.findtext("{http://purl.org/dc/elements/1.1/}creator") or ""),
+                          "image_url": image_url,
+                          "image_caption": plain_text(item.findtext("media:description", "", MEDIA_NS)),
+                          "image_credit": plain_text(item.findtext("media:credit", "", MEDIA_NS))})
     if not items:
         raise ValueError("No headlines in feed")
     selected = select_stories(items)[:24]
     return {"source": "The New York Times", "items": [
-        {key: item[key] for key in ("title", "url", "published")} for item in selected
+        {key: value for key, value in item.items() if key != "categories"} for item in selected
     ]}
 
 

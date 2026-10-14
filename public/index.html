@@ -7,6 +7,8 @@
   <title>glitch / dashboard</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23101815'/%3E%3Ctext x='9' y='29' fill='%23c6f294' font-size='30'%3Eg%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/newspaper.css">
+  <script src="/edition.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body data-transition="fade">
@@ -21,6 +23,18 @@
       <h1 id="news-heading">A world in motion.</h1>
       <div id="headlines" class="headlines"><p class="placeholder">Gathering the latest headlines…</p></div>
       <div class="panel-bottom"><span>NYT / TOP STORIES</span><span id="news-status" role="status">Connecting</span></div>
+    </section>
+
+    <section class="panel newspaper" id="article" aria-labelledby="article-title" inert aria-hidden="true">
+      <div class="paper-masthead"><span class="paper-edition">THE DAILY BRIEFING</span><span class="paper-name">The Glitch Gazette</span><span id="article-page" class="paper-edition"></span></div>
+      <div class="paper-dateline"><span>SELECTED FROM THE NEW YORK TIMES</span><time id="article-date"></time></div>
+      <h1 id="article-title" class="paper-headline">Today's dispatches</h1>
+      <div class="paper-byline" id="article-author"></div>
+      <div class="paper-lead">
+        <figure id="article-figure" class="paper-figure"><img id="article-image" alt=""><figcaption><span id="article-caption"></span><span id="article-credit"></span></figcaption></figure>
+        <div class="paper-summary"><span class="paper-kicker">THE STORY</span><p id="article-excerpt"></p><a id="article-link" target="_blank" rel="noopener">Read the full story ↗</a></div>
+      </div>
+      <div class="panel-bottom paper-bottom"><span>THE NEW YORK TIMES / TOP STORIES</span><span id="article-status" role="status"></span></div>
     </section>
 
     <section class="panel" id="weather" aria-labelledby="weather-heading" inert aria-hidden="true">
@@ -38,7 +52,7 @@
   </main>
 
   <footer class="footer">
-    <div class="panel-nav" aria-label="Dashboard panels"><button data-panel="0" aria-label="News" aria-current="true">01 <span>Headlines</span></button><button data-panel="1" aria-label="Weather">02 <span>Weather</span></button><button data-panel="2" aria-label="Quote">03 <span>A thought</span></button></div>
+    <div class="panel-nav" aria-label="Dashboard panels"><button data-panel="news" aria-label="News" aria-current="true">01 <span>Headlines</span></button><button data-panel="article" aria-label="Newspaper">02 <span>Newspaper</span></button><button data-panel="weather" aria-label="Weather">03 <span>Weather</span></button><button data-panel="quote" aria-label="Quote">04 <span>A thought</span></button></div>
     <div class="controls"><button id="pause" aria-label="Pause rotation">Pause</button><button id="fullscreen">Fullscreen</button><button id="settings">Settings</button></div>
     <span id="countdown" class="countdown" aria-label="Seconds until next panel">30s</span>
     <div class="progress-track"><div id="progress"></div></div>
