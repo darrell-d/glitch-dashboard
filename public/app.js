@@ -6,7 +6,7 @@ const panels = ['news', 'article', 'weather', 'quote'];
 let screens = DashboardEdition.createEdition([]);
 const records = {};
 let config = { location: 'Philadelphia', timezone: 'America/New_York' };
-let options = { duration: 30, transition: 'fade' };
+let options = { duration: 30, transition: 'fade', weatherIconStyle: 'weekly' };
 let current = 0;
 let newsOffset = 0;
 let paused = false;
@@ -23,10 +23,11 @@ function store(key, value) {
 }
 function validOptions(value) {
   return value && Number.isFinite(value.duration) && value.duration >= 5 && value.duration <= 600
-    && ['fade', 'slide', 'none'].includes(value.transition);
+    && ['fade', 'slide', 'none'].includes(value.transition)
+    && (value.weatherIconStyle === undefined || ['weekly', ...WeatherVisual.STYLES].includes(value.weatherIconStyle));
 }
 const savedOptions = readStored('glitch-display-options');
-if (validOptions(savedOptions)) options = savedOptions;
+if (validOptions(savedOptions)) options = { ...options, ...savedOptions };
 document.body.dataset.transition = options.transition;
 
 function node(tag, className, text) {
@@ -111,6 +112,7 @@ function fitArticle() {
 
 function renderWeather(data) {
   const { current: now, hourly, daily } = data;
+  const iconStyle = WeatherVisual.resolveStyle(options.weatherIconStyle);
   $('weather-heading').textContent = config.location;
   const content = $('weather-content');
   const summary = node('div', 'weather-now');
@@ -124,7 +126,7 @@ function renderWeather(data) {
   illustration.dataset.kind = WeatherVisual.appearance(now.weather_code, isDay);
   illustration.setAttribute('role', 'img');
   illustration.setAttribute('aria-label', `${condition(now.weather_code)}${isDay ? '' : ' at night'}`);
-  illustration.innerHTML = WeatherVisual.icon(now.weather_code, isDay);
+  illustration.innerHTML = WeatherVisual.icon(now.weather_code, isDay, iconStyle);
   const conditions = node('div', 'conditions');
   conditions.append(node('p', 'condition-label', condition(now.weather_code)));
   const details = node('div', 'weather-detail');
@@ -152,7 +154,7 @@ function renderWeather(data) {
     hour.setAttribute('aria-label', `${displayHour(stamp, i)}: ${condition(code)}, ${number(hourly.temperature_2m[i])}°F, ${rain}% chance of precipitation`);
     const icon = node('div', 'hourly-icon');
     icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = WeatherVisual.icon(code, hourly.is_day[i] !== 0);
+    icon.innerHTML = WeatherVisual.icon(code, hourly.is_day[i] !== 0, iconStyle);
     const rainChance = node('div', 'hourly-rain', `${rain}%`);
     if (rain >= 30) rainChance.dataset.wet = 'true';
     hour.append(node('div', 'hourly-time', displayHour(stamp, i)), icon,
@@ -167,7 +169,7 @@ function renderWeather(data) {
     column.append(node('div', 'forecast-name', i === 0 ? 'TODAY' : dayName.toUpperCase()));
     const icon = node('div', 'forecast-icon');
     icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = WeatherVisual.icon(daily.weather_code[i]);
+    icon.innerHTML = WeatherVisual.icon(daily.weather_code[i], true, iconStyle);
     column.append(icon);
     const high = node('div', 'forecast-temp', `${number(daily.temperature_2m_max[i])}°`);
     high.append(node('span', '', ` / ${number(daily.temperature_2m_min[i])}°F`));
@@ -336,16 +338,19 @@ $('settings').addEventListener('click', () => {
   setPaused(true);
   $('duration').value = options.duration;
   $('transition').value = options.transition;
+  $('weather-icon-style').value = options.weatherIconStyle;
   $('settings-dialog').returnValue = '';
   $('settings-dialog').showModal();
 });
 $('settings-dialog').addEventListener('close', () => {
   if ($('settings-dialog').returnValue === 'save') {
-    const value = { duration: Number($('duration').value), transition: $('transition').value };
+    const value = { duration: Number($('duration').value), transition: $('transition').value,
+      weatherIconStyle: $('weather-icon-style').value };
     if (validOptions(value)) {
       options = value;
       store('glitch-display-options', options);
       document.body.dataset.transition = options.transition;
+      if (records.weather?.data) renderWeather(records.weather.data);
       resetTimer();
     }
   }

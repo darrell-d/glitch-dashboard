@@ -11,8 +11,9 @@ No third-party Python packages or frontend build required. Docker includes curl.
 make run
 ```
 
-Open **http://localhost:8080**. Settings (bottom right) controls screen duration
-and fade, slide, or instant transitions. Defaults: 30 seconds, soft fade.
+Open **http://localhost:8080**. Settings (bottom right) controls screen duration,
+fade, slide, or instant transitions, and the weather icon style. Defaults: 30
+seconds, soft fade, and a Meteocons style that changes each calendar week.
 Controls appear when hovering over or focusing the footer, and on small screens.
 
 Keyboard: **← / →** switch panels, **Space** pauses/resumes, **F** toggles
@@ -38,11 +39,12 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   alongside; feels-like temperature, a compact 12-hour forecast with rain chance,
   and a five-day forecast in both units. A
   large condition illustration fills the center, with day/night-aware sun/moon,
-  clouds, rain, fog, snow, or storms. Each forecast day has a simpler icon.
+  clouds, rain, fog, snow, or storms. Current, hourly, and daily conditions use
+  Meteocons; Fill, Flat, Line, and Monochrome rotate weekly or can be fixed in
+  Settings. The pinned SVG assets are served locally for display reliability.
   A secondary lunar readout shows the current moon phase and illuminated
   percentage using a local astronomical calculation.
-  Local SVG assets need no image service or extra runtime library. Data provider
-  attribution is in Settings instead of on the weather screen.
+  Data and icon attribution is in Settings instead of on the weather screen.
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`, set in
   an editorial lockup with a vertical accent rule and the author below a fine rule.
 

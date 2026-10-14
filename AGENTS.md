@@ -22,8 +22,10 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   the display. Non-square photos use a blurred copy behind the uncropped original.
 - No global app header, visible section names, or navigation dots anywhere.
   Keep automatic rotation, keyboard navigation, and display controls.
-- Weather uses local SVG artwork based on WMO condition and `is_day`, plus five
-  forecast icons. No provider/Outside labels on the screen; attribution in Settings.
+- Weather uses pinned local Meteocons SVG artwork based on WMO condition and
+  `is_day`, plus hourly and five-day forecast icons. Fill, Flat, Line, and
+  Monochrome rotate weekly unless Settings pins one style. No provider/Outside
+  labels on the screen; attribution stays in Settings.
 - Weather also shows a secondary locally calculated moon phase and illumination;
   keep it visually subordinate to current temperature and conditions.
 - Weather includes a compact next-12-hours strip with time, condition, Fahrenheit

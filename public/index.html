@@ -6,12 +6,12 @@
   <meta name="theme-color" content="#101815">
   <title>The Daily</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23101815'/%3E%3Ctext x='9' y='29' fill='%23c6f294' font-size='30'%3Eg%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/styles.css?v=daily-11">
-  <link rel="stylesheet" href="/newspaper.css?v=daily-11">
-  <script src="/edition.js?v=daily-11" defer></script>
-  <script src="/weather.js?v=daily-11" defer></script>
-  <script src="/moon.js?v=daily-11" defer></script>
-  <script src="/app.js?v=daily-11" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=daily-12">
+  <link rel="stylesheet" href="/newspaper.css?v=daily-12">
+  <script src="/edition.js?v=daily-12" defer></script>
+  <script src="/weather.js?v=daily-12" defer></script>
+  <script src="/moon.js?v=daily-12" defer></script>
+  <script src="/app.js?v=daily-12" defer></script>
 </head>
 <body data-transition="fade">
   <main id="display">
@@ -63,9 +63,10 @@
       <span class="eyebrow">MAKE IT YOURS</span><h2>Display settings</h2>
       <label for="duration">Seconds per panel</label><input id="duration" type="number" min="5" max="600" value="30" required>
       <label for="transition">Transition</label><select id="transition"><option value="fade">Soft fade</option><option value="slide">Slide upward</option><option value="none">Instant</option></select>
+      <label for="weather-icon-style">Weather icons</label><select id="weather-icon-style"><option value="weekly">Rotate style every week</option><option value="fill">Fill</option><option value="flat">Flat</option><option value="line">Line</option><option value="monochrome">Monochrome</option></select>
       <p>Saved on this browser. Weather location is configured on the server.</p>
       <details class="source-settings"><summary>News sources</summary><ul id="source-status-list"></ul></details>
-      <p class="data-credit">Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a></p>
+      <p class="data-credit">Weather data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a><br>Weather icons: <a href="https://meteocons.com/" target="_blank" rel="noopener">Meteocons</a> · MIT</p>
       <div class="dialog-actions"><button value="cancel" formnovalidate>Cancel</button><button value="save" class="primary">Save settings</button></div>
     </form>
   </dialog>

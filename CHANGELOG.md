@@ -4,6 +4,8 @@
 
 ### Features
 
+- Replace the local weather symbols with animated Meteocons and rotate among
+  Fill, Flat, Line, and Monochrome each week, with a persistent Settings override.
 - Rename the masthead The Daily with Jacquard 24 typography and remove the
   global header, story count, outbound article link, and visible section labels.
 - Fill photo letterboxing with a blurred enlarged copy of the uncropped image.

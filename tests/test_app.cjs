@@ -18,6 +18,7 @@ class Element {
     this.children = [];
     this.clientHeight = 800;
     this.scrollHeight = 0;
+    this.open = false;
     this.classes = new Set();
     this.classList = { toggle: (name, value) => value ? this.classes.add(name) : this.classes.delete(name),
       add: (name) => this.classes.add(name), contains: (name) => this.classes.has(name) };
@@ -28,6 +29,7 @@ class Element {
   replaceChildren(...children) { this.children = children; }
   addEventListener(name, listener) { this.listeners[name] = listener; }
   click() { this.listeners.click?.(); }
+  showModal() { this.open = true; }
 }
 
 async function app(hash = '', { storyCount = 3, weather = null } = {}) {
@@ -104,7 +106,7 @@ test('weather renders night-aware central imagery and five forecast icons', asyn
   const screen = await app('', { weather });
   const [summary, hourly, forecast] = screen.elements['weather-content'].children;
   assert.equal(summary.children[1].dataset.kind, 'moon');
-  assert.match(summary.children[1].innerHTML, /#moon/);
+  assert.match(summary.children[1].innerHTML, /clear-night\.svg/);
   assert.match(summary.children[1].attributes['aria-label'], /night/);
   assert.equal(forecast.children.length, 5);
   assert.ok(forecast.children.every((day) => day.children.some((child) => child.className === 'forecast-icon')));
@@ -114,6 +116,22 @@ test('weather renders night-aware central imagery and five forecast icons', asyn
   assert.equal(hourly.children[1].children.length, 12);
   assert.equal(hourly.children[1].children[0].children[0].textContent, 'NOW');
   assert.match(hourly.children[1].children[5].attributes['aria-label'], /35% chance of precipitation/);
+});
+
+test('weather icon style can be fixed in settings', async () => {
+  const weather = { current: { temperature_2m: 68, apparent_temperature: 68, weather_code: 0,
+    is_day: 1, relative_humidity_2m: 50, wind_speed_10m: 4 }, hourly: {
+    time: Array.from({ length: 12 }, (_, i) => `2026-10-14T${String(i + 10).padStart(2, '0')}:00`),
+    temperature_2m: Array(12).fill(68), weather_code: Array(12).fill(0),
+    precipitation_probability: Array(12).fill(0), is_day: Array(12).fill(1) }, daily: {
+    time: ['2026-10-14'], temperature_2m_max: [70], temperature_2m_min: [50], weather_code: [0] } };
+  const screen = await app('', { weather });
+  screen.elements.settings.click();
+  screen.elements['weather-icon-style'].value = 'monochrome';
+  screen.elements['settings-dialog'].returnValue = 'save';
+  screen.elements['settings-dialog'].listeners.close();
+  assert.match(screen.elements['weather-content'].children[0].children[1].innerHTML,
+    /\/meteocons\/monochrome\/clear-day\.svg/);
 });
 
 test('display markup has no app header, story count, article link, or quote collection link', () => {
