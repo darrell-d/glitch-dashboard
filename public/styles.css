@@ -75,9 +75,8 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .radar-base img { filter:grayscale(.35) saturate(.65) brightness(.58) contrast(1.08); }
 .radar-precipitation { opacity:0; }
 .radar-precipitation.active { opacity:.78; }
-.radar-forecast { mix-blend-mode:darken; }
+.radar-forecast { transform:scale(1.035); transform-origin:center; filter:blur(clamp(12px,1.25vw,26px)) saturate(1.45) contrast(1.12); mix-blend-mode:darken; }
 .radar-forecast.active { opacity:.82; }
-.radar-forecast img { filter:contrast(1.8) saturate(1.35); }
 .radar-shade { position:absolute; inset:0; background:linear-gradient(180deg,#0b1415cc 0,#0b141533 24%,transparent 55%,#0b14158c 100%); pointer-events:none; }
 .radar-time { position:absolute; z-index:2; top:clamp(28px,4vh,64px); right:clamp(28px,4.5vw,100px); text-align:right; font-weight:700; letter-spacing:.08em; font-size:clamp(12px,1vw,22px); text-shadow:0 2px 18px #000; }
 .radar-time span { display:block; color:var(--dim); font-size:.65em; margin-bottom:5px; }

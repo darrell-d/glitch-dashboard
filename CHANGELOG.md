@@ -64,6 +64,8 @@
 
 ### Bugfixes
 
+- Smooth the coarse hourly forecast grid as one composited map layer so model cells
+  and source-tile boundaries do not appear as blue rectangles.
 - Move the radar precipitation key to the bottom center to balance the map overlay.
 - Remove the radar title block and on-map provider credit line so the weather map
   and temperature markers use the full visual field; retain provider details in Settings.
