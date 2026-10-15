@@ -38,7 +38,7 @@ class Element {
   pause() { this.playing = false; }
 }
 
-async function app(hash = '', { storyCount = 3, weather = null, settings = null, pictures = null, media = null } = {}) {
+async function app(hash = '', { storyCount = 3, weather = null, settings = null, pictures = null, media = null, cartoons = null } = {}) {
   const posts = [];
   const stored = {};
   const markup = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
@@ -68,7 +68,7 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
     fetch: async (url, init = {}) => ({ ok: true, json: async () => {
       if (url === '/api/settings' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return JSON.parse(init.body); }
       if (url === '/api/settings' && settings) return settings;
-      if (url === '/api/pictures' && (pictures || media)) return { data: { photos: pictures || [], videos: media || [] }, updated_at: new Date().toISOString(), stale: false };
+      if (url === '/api/pictures' && (pictures || media || cartoons)) return { data: { photos: pictures || [], videos: media || [], cartoons: cartoons || [] }, updated_at: new Date().toISOString(), stale: false };
       if (url.startsWith('/api/config')) return { location: 'Philadelphia', region: 'Pennsylvania', postal_code: '19103', latitude: 39.95, longitude: -75.16, timezone: 'America/New_York' };
       if (url === '/api/news') return { data: { items }, updated_at: new Date().toISOString(), stale: false };
       if (url.startsWith('/api/weather') && weather) return { data: weather, updated_at: new Date().toISOString(), stale: false };
@@ -154,6 +154,19 @@ test('NASA pictures appear in the next batch with title, description, and credit
   assert.match(screen.elements['picture-caption'].textContent, /^Title \d$/);
   assert.match(screen.elements['picture-credit'].textContent, /^Image: Photographer \d$/);
   assert.equal(screen.elements['picture-image'].src, screen.run("screens[current].item.url"));
+});
+
+test('one political cartoon is mixed into each edition as a full-screen picture', async () => {
+  const cartoons = [1, 2].map((i) => ({ url: `https://tile.loc.gov/cartoon-${i}.jpg`,
+    kicker: `Political cartoon archive · 18${i}0`, title: `Cartoon ${i}`,
+    description: `Description ${i}`, credit: 'Library of Congress · Public domain' }));
+  const screen = await app('', { cartoons });
+  screen.run('showPanel(screens.length)');
+  const shown = screen.run("screens.filter((item) => item.item?.kicker?.startsWith('Political cartoon')).map((item) => item.item.url)");
+  assert.equal(shown.length, 1);
+  screen.run("showPanel(screens.findIndex((item) => item.item?.kicker?.startsWith('Political cartoon')))");
+  assert.match(screen.elements['picture-caption'].textContent, /^Cartoon [12]$/);
+  assert.equal(screen.elements['picture-credit'].textContent, 'Image: Library of Congress · Public domain');
 });
 
 test('featured video owns rotation until playback ends', async () => {

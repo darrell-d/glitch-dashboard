@@ -3,7 +3,7 @@ import io
 import unittest
 from unittest.mock import Mock, patch
 
-from server import (Feed, Handler, SettingsStore, SCREEN_DURATIONS, load_pictures, parse_nasa_iotd, parse_wikimedia_motd, parse_wikimedia_potd, pick_nasa_archive, add_temperatures, fetch, fetch_head, load_major_cities,
+from server import (Feed, Handler, SettingsStore, SCREEN_DURATIONS, load_pictures, parse_loc_cartoons, parse_nasa_iotd, parse_wikimedia_motd, parse_wikimedia_potd, pick_nasa_archive, add_temperatures, fetch, fetch_head, load_major_cities,
                     location_url, nearby_temperature_url, normalize_postal_code,
                     parse_alerts, parse_air_quality, parse_location, parse_news, parse_quote, parse_radar, parse_weather,
                     select_major_cities, weather_url)
@@ -272,6 +272,30 @@ class NasaPictureTests(unittest.TestCase):
         self.assertEqual(len(load_pictures(broken_archive)["photos"]), 1)
         with self.assertRaises(ValueError):
             load_pictures(Mock(side_effect=OSError("offline")))
+
+
+class PoliticalCartoonTests(unittest.TestCase):
+    def test_library_of_congress_uses_largest_safe_image_and_public_domain_credit(self):
+        raw = json.dumps({"results": [{
+            "title": "The rail splitter at work", "date": "1865",
+            "description": ["A political cartoon about reconstruction."],
+            "url": "https://www.loc.gov/item/123/",
+            "image_url": ["https://tile.loc.gov/example_150px.jpg#h=150&w=100",
+                          "https://tile.loc.gov/example.jpg#h=800&w=1200",
+                          "https://untrusted.example/full.jpg#h=2000&w=3000"],
+        }]})
+        cartoon = parse_loc_cartoons(raw)[0]
+        self.assertEqual(cartoon["url"], "https://tile.loc.gov/example.jpg")
+        self.assertEqual(cartoon["kicker"], "Political cartoon archive · 1865")
+        self.assertEqual(cartoon["credit"], "Library of Congress · Public domain")
+        self.assertEqual(cartoon["page_url"], "https://www.loc.gov/item/123/")
+
+    def test_collection_records_without_tile_images_are_skipped(self):
+        raw = json.dumps({"results": [
+            {"title": "Collection guide", "image_url": ["https://www.loc.gov/static/collection.jpg"]},
+            {"title": "A cartoon", "image_url": ["https://tile.loc.gov/cartoon.jpg"]},
+        ]})
+        self.assertEqual([item["title"] for item in parse_loc_cartoons(raw)], ["A cartoon"])
 
 
 class WikimediaMediaTests(unittest.TestCase):

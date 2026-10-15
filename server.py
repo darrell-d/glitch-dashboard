@@ -39,6 +39,7 @@ NASA_IOTD_URL = "https://www.nasa.gov/feeds/iotd-feed/"
 NASA_IMAGES_URL = "https://images-api.nasa.gov"
 WIKIMEDIA_POTD_URL = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=atom&language=en"
 WIKIMEDIA_MOTD_URL = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=motd&feedformat=atom&language=en"
+LOC_CARTOONS_URL = "https://www.loc.gov/collections/american-cartoon-prints/"
 # Specific subjects keep random archive picks on striking imagery rather than launch-pad snapshots.
 NASA_ARCHIVE_TOPICS = ("nebula", "galaxy", "star cluster", "supernova", "planetary nebula", "Jupiter",
                        "Saturn", "Mars surface", "aurora", "Moon surface", "comet", "Earth at night")
@@ -464,6 +465,46 @@ def parse_wikimedia_potd(raw, limit=5):
     return photos
 
 
+def parse_loc_cartoons(raw, limit=12):
+    """Public-domain American political cartoons from the Library of Congress."""
+    cartoons = []
+    for item in json.loads(raw).get("results", []):
+        choices = []
+        for candidate in item.get("image_url") or []:
+            url, _, fragment = candidate.partition("#")
+            if not url.startswith("https://tile.loc.gov/"):
+                continue
+            dimensions = re.search(r"h=(\d+)&w=(\d+)", fragment)
+            area = int(dimensions.group(1)) * int(dimensions.group(2)) if dimensions else 0
+            choices.append((area, url))
+        if not choices:
+            continue
+        title = plain(item.get("title"))
+        if not title:
+            continue
+        descriptions = item.get("description") or []
+        description = description_text(descriptions[0] if isinstance(descriptions, list) and descriptions else descriptions)
+        year = str(item.get("date") or "")[:4]
+        cartoons.append({"url": max(choices)[1], "title": title,
+                         "description": description or "A historic American political print.",
+                         "credit": "Library of Congress · Public domain",
+                         "kicker": f"Political cartoon archive{f' · {year}' if year.isdigit() else ''}",
+                         "published": item.get("date") or "", "page_url": item.get("url") or item.get("id") or ""})
+        if len(cartoons) == limit:
+            break
+    if not cartoons:
+        raise ValueError("Library of Congress cartoon collection has no images")
+    return cartoons
+
+
+def loc_cartoon_url(day):
+    # The filtered collection currently spans seven 25-item pages. Cycling the page daily
+    # keeps the unattended display varied without requesting the full catalog response.
+    page = random.Random(day.isoformat()).randint(1, 7)
+    return f"{LOC_CARTOONS_URL}?" + urllib.parse.urlencode(
+        {"fo": "json", "c": 25, "q": "cartoon", "sp": page, "at": "results"})
+
+
 def browser_playable(media_type):
     """Chrome plays WebM (VP8/VP9/AV1) and MP4 (H.264/AV1/VP9); it dropped Ogg Theora and has no MPEG-4 Part 2."""
     kind, _, params = media_type.partition(";")
@@ -580,15 +621,16 @@ def pick_nasa_archive(fetcher, day, count=5, attempts=20):
 
 
 def load_pictures(fetcher=None, now=None):
-    """NASA and Wikimedia daily pictures plus Wikimedia daily video."""
+    """Daily pictures, one political-cartoon pool, and Wikimedia daily video."""
     fetcher = fetcher or fetch
-    photos, videos = [], []
+    photos, videos, cartoons = [], [], []
+    day = (now or datetime.now(timezone.utc)).date()
     try:
         photos += parse_nasa_iotd(fetcher(NASA_IOTD_URL))
     except Exception:
         pass  # The archive half can still supply the day's pictures.
     try:
-        photos += pick_nasa_archive(fetcher, (now or datetime.now(timezone.utc)).date())
+        photos += pick_nasa_archive(fetcher, day)
     except Exception:
         pass
     try:
@@ -599,9 +641,13 @@ def load_pictures(fetcher=None, now=None):
         videos += parse_wikimedia_motd(fetcher(WIKIMEDIA_MOTD_URL))
     except Exception:
         pass
-    if not photos and not videos:
+    try:
+        cartoons += parse_loc_cartoons(fetcher(loc_cartoon_url(day)))
+    except Exception:
+        pass
+    if not photos and not videos and not cartoons:
         raise ValueError("Daily pictures and media unavailable")
-    return {"photos": photos, "videos": videos}
+    return {"photos": photos, "videos": videos, "cartoons": cartoons}
 
 
 def parse_screen_durations(value):

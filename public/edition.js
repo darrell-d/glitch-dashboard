@@ -4,6 +4,7 @@
   const BATCH_SIZE = 3;
   const PICTURES_PER_BATCH = 3;
   const MEDIA_PER_BATCH = 1;
+  const CARTOONS_PER_BATCH = 1;
 
   // Next stories to show: unshown stories in feed order, so a new story at the top of
   // a feed joins the very next batch. Once everything has been shown, the cycle restarts.
@@ -29,7 +30,7 @@
     return copy;
   }
 
-  function createEdition(stories, { gallery = false, pictures = [], media = [], random = Math.random } = {}) {
+  function createEdition(stories, { gallery = false, pictures = [], media = [], cartoons = [], random = Math.random } = {}) {
     const selected = stories.slice(0, BATCH_SIZE).map((item) => ({ ...item }));
     const screens = [...(selected.length ? selected.map((item, index) => ({ panel: 'article', item, index, count: selected.length })) : [{ panel: 'news' }]),
       { panel: 'weather' }, { panel: 'radar' }, { panel: 'markets' }, { panel: 'quote' }, ...(gallery ? [{ panel: 'gallery' }] : [])];
@@ -38,12 +39,13 @@
     const extras = shuffle([
       ...pictures.map((item) => ({ panel: 'picture', item: { ...item } })),
       ...media.map((item) => ({ panel: 'media', item: { ...item } })),
+      ...cartoons.map((item) => ({ panel: 'picture', item: { ...item } })),
     ], random);
     const gaps = shuffle(screens.map((_, i) => i + 1), random).slice(0, extras.length).sort((a, b) => b - a);
     gaps.forEach((gap, i) => screens.splice(gap, 0, extras[i]));
     return screens;
   }
-  const api = { BATCH_SIZE, PICTURES_PER_BATCH, MEDIA_PER_BATCH, pickStories, shuffle, createEdition };
+  const api = { BATCH_SIZE, PICTURES_PER_BATCH, MEDIA_PER_BATCH, CARTOONS_PER_BATCH, pickStories, shuffle, createEdition };
   if (typeof module !== 'undefined') module.exports = api;
   else root.DashboardEdition = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

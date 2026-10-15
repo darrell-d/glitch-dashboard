@@ -66,6 +66,16 @@ test('featured video uses its own non-adjacent full-screen slot', () => {
   }
 });
 
+test('a political cartoon uses the picture treatment in its own non-adjacent slot', () => {
+  const pictures = [{ url: 'p1' }, { url: 'p2' }, { url: 'p3' }];
+  const media = [{ url: 'v1' }];
+  const cartoons = [{ url: 'c1' }];
+  const panels = createEdition(pickStories(stories).items, { gallery: true, pictures, media, cartoons,
+    random: () => 0.5 }).map((screen) => screen.panel);
+  assert.equal(panels.filter((panel) => panel === 'picture').length, 4);
+  assert.ok(panels.every((panel, i) => !(['picture', 'media'].includes(panel) && ['picture', 'media'].includes(panels[i + 1]))), panels.join());
+});
+
 test('shuffle keeps every item', () => {
   assert.deepEqual(shuffle(stories).map((item) => item.url).sort(), stories.map((item) => item.url).sort());
 });

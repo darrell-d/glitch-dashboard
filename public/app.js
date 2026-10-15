@@ -18,6 +18,7 @@ let current = 0;
 let shownStories = new Set();
 let shownPictures = new Set();
 let shownMedia = new Set();
+let shownCartoons = new Set();
 let mediaToken = 0;
 let mediaFallbackTimer;
 let paused = false;
@@ -580,7 +581,7 @@ function renderMedia(item) {
 async function refreshPictures() {
   try {
     const value = await request('/api/pictures');
-    if (value.data?.photos || value.data?.videos) records.pictures = value;
+    if (value.data?.photos || value.data?.videos || value.data?.cartoons) records.pictures = value;
   } catch { /* Picture screens are optional; skip them until the feed is available. */ }
 }
 function nextEdition(items) {
@@ -599,7 +600,13 @@ function nextEdition(items) {
     Math.min(DashboardEdition.MEDIA_PER_BATCH, dayMedia.length));
   shownMedia = mediaBatch.shown;
   mediaBatch.items.forEach((item) => { if (item.poster) { const preload = new Image(); preload.src = item.poster; } });
-  screens = DashboardEdition.createEdition(batch.items, { gallery, pictures: pictureBatch.items, media: mediaBatch.items });
+  const cartoons = records.pictures?.data?.cartoons || [];
+  const cartoonBatch = DashboardEdition.pickStories(DashboardEdition.shuffle(cartoons), shownCartoons,
+    Math.min(DashboardEdition.CARTOONS_PER_BATCH, cartoons.length));
+  shownCartoons = cartoonBatch.shown;
+  cartoonBatch.items.forEach((cartoon) => { const preload = new Image(); preload.src = cartoon.url; });
+  screens = DashboardEdition.createEdition(batch.items, { gallery, pictures: pictureBatch.items,
+    media: mediaBatch.items, cartoons: cartoonBatch.items });
   // Build the photo wall with the batch so its images load well before it appears.
   if (gallery) renderGallery(photos);
 }

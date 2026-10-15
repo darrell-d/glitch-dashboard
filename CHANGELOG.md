@@ -4,6 +4,8 @@
 
 ### Features
 
+- Add one public-domain historical political cartoon from the Library of Congress
+  American Cartoon Prints collection to every rotation batch.
 - Default the weather screen to one minute and show a smooth remaining-time bar on
   featured videos until playback completes.
 - Listen on all interfaces (`0.0.0.0`) by default, including in Compose, so other devices

@@ -27,6 +27,7 @@
 - [x] Support RSS/Atom, CNN preview metadata, and TechCrunch featured photos.
 - [x] Add St. Lucia Times, The Voice St. Lucia, and BBC News when photo-backed previews are available.
 - [x] Add Wikimedia pictures of the day and full-screen media-of-the-day video playback.
+- [x] Mix one public-domain Library of Congress political cartoon into each edition.
 - [x] Verify all ten publisher adapters live and save a reusable diagnostic.
 - [ ] Refine WSJ's initial World News selection if broader coverage is wanted.
 
