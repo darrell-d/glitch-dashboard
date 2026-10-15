@@ -116,7 +116,8 @@
     const directionNames = { n: 'north', ne: 'northeast', e: 'east', se: 'southeast',
       s: 'south', sw: 'southwest', w: 'west', nw: 'northwest' };
     const rounded = Math.round(speed);
-    const detail = direction ? `From ${directionNames[direction]}` : speed < 12 ? 'Light wind' : speed < 25 ? 'Moderate wind' : 'Strong wind';
+    const detail = direction ? directionNames[direction][0].toUpperCase() + directionNames[direction].slice(1)
+      : speed < 12 ? 'Light wind' : speed < 25 ? 'Moderate wind' : 'Strong wind';
     const icons = [weatherVisual.windStrengthIcon(speed, seed)];
     if (direction) icons.push(`wind-direction-${direction}`);
     return { kind: 'wind', icon: icons[0], icons, title: `Wind · ${rounded} mph`, detail,

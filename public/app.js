@@ -252,7 +252,11 @@ function updateWeatherSignal() {
     incoming.classList.add('entering');
     signalSlot.element.append(incoming);
     const container = signalSlot.element;
-    setTimeout(() => { if (container === signalSlot.element) container.replaceChildren(signalSlot.current); }, 800);
+    setTimeout(() => {
+      if (container !== signalSlot.element || incoming !== signalSlot.current) return;
+      outgoing.remove();
+      incoming.classList.remove('entering');
+    }, 800);
   } else signalSlot.element.replaceChildren(incoming);
   if (index !== found) signalSlot.shownAt = now;
   Object.assign(signalSlot, { current: incoming, id: signalId(item) });

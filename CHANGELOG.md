@@ -9,6 +9,11 @@
   so both strength and direction icons remain legible from across the room.
 - Move wind into the animated weather signal slot so it always alternates with the current
   sunrise, sunset, moonrise, moon phase, and any active environmental alerts.
+
+### Bugfixes
+
+- Keep an incoming weather signal in place after its transition instead of reinserting it
+  and replaying the entrance animation.
 - Add NASA picture screens: the five newest Images of the Day plus five daily random
   NASA Image Library photos, three shuffled per batch in random, non-adjacent positions.
 - Prefer stories with photos when a feed provides them (e.g. a new NYT entry posted

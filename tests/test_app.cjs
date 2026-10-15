@@ -23,12 +23,14 @@ class Element {
     this.open = false;
     this.classes = new Set();
     this.classList = { toggle: (name, value) => value ? this.classes.add(name) : this.classes.delete(name),
-      add: (name) => this.classes.add(name), contains: (name) => this.classes.has(name) };
+      add: (name) => this.classes.add(name), remove: (name) => this.classes.delete(name),
+      contains: (name) => this.classes.has(name) };
   }
   setAttribute(name, value) { this.attributes[name] = value; }
   removeAttribute(name) { delete this.attributes[name]; }
-  append(...children) { this.children.push(...children); }
-  replaceChildren(...children) { this.children = children; }
+  append(...children) { children.forEach((child) => { if (child && typeof child === 'object') child.parentElement = this; }); this.children.push(...children); }
+  replaceChildren(...children) { this.children.forEach((child) => { if (child && typeof child === 'object') child.parentElement = null; }); this.children = []; this.append(...children); }
+  remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter((child) => child !== this); this.parentElement = null; }
   addEventListener(name, listener) { this.listeners[name] = listener; }
   click() { this.listeners.click?.(); }
   showModal() { this.open = true; }
@@ -43,6 +45,7 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
   const location = { hash };
   let now = 0;
   const frames = [];
+  const transitionTimers = [];
   const items = Array.from({ length: storyCount }, (_, i) => ({ title: `Story ${i}`, description: `Description ${i}`,
     source: ['CNN', 'WIRED', 'Kotaku'][i % 3], source_updated_at: new Date().toISOString(), source_stale: i === 0,
     url: `https://example.com/${i}`, image_url: `https://example.com/${i}.jpg` }));
@@ -58,7 +61,7 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
     window: { addEventListener() {} }, history: { replaceState: (_, __, hash) => { location.hash = hash; } },
     localStorage: { getItem: () => null, setItem() {} }, performance: { now: () => now },
     getComputedStyle: () => ({ fontSize: '32px' }), requestAnimationFrame: (callback) => frames.push(callback),
-    setInterval() {}, setTimeout() {}, clearTimeout() {}, AbortController, Image: class { },
+    setInterval() {}, setTimeout(callback, delay) { if (delay === 800) transitionTimers.push(callback); }, clearTimeout() {}, AbortController, Image: class { },
     fetch: async (url, init = {}) => ({ ok: true, json: async () => {
       if (url === '/api/settings' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return JSON.parse(init.body); }
       if (url === '/api/settings' && settings) return settings;
@@ -78,7 +81,8 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
   await new Promise(setImmediate);
   return { elements, extras, location, listeners, posts,
     run: (code) => vm.runInContext(code, context), advance: (milliseconds) => { now += milliseconds; vm.runInContext('tick()', context); },
-    frame: (milliseconds) => { now += milliseconds; const pending = frames.splice(0); pending.forEach((callback) => callback()); } };
+    frame: (milliseconds) => { now += milliseconds; const pending = frames.splice(0); pending.forEach((callback) => callback()); },
+    finishTransitions: () => transitionTimers.splice(0).forEach((callback) => callback()) };
 }
 
 test('stories appear immediately and automatic rotation advances to the next story', async () => {
@@ -199,6 +203,28 @@ test('weather icon style can be fixed in settings', async () => {
   assert.match(screen.elements['weather-content'].children[0].children[1].innerHTML,
     /\/meteocons\/monochrome\/clear-day\.svg/);
   assert.match(screen.elements['weather-content'].children[0].children[1].innerHTML, /color:#c6f294/);
+});
+
+test('weather signal transition removes only the outgoing slide', async () => {
+  const weather = { current: { temperature_2m: 68, apparent_temperature: 68, weather_code: 0,
+    is_day: 0, relative_humidity_2m: 85, wind_speed_10m: 9, wind_direction_10m: 225 }, hourly: {
+    time: Array.from({ length: 12 }, (_, i) => `2026-10-14T${String(i + 10).padStart(2, '0')}:00`),
+    temperature_2m: Array(12).fill(68), weather_code: Array(12).fill(0),
+    precipitation_probability: Array(12).fill(0), is_day: Array(12).fill(0) }, daily: {
+    time: ['2026-10-14', '2026-10-15'], sunrise: ['2026-10-14T07:10', '2026-10-15T07:11'],
+    sunset: ['2026-10-14T18:22', '2026-10-15T18:21'], temperature_2m_max: [70, 72],
+    temperature_2m_min: [50, 52], weather_code: [0, 2] }, utc_offset_seconds: -14400 };
+  const screen = await app('', { weather });
+  const slot = screen.elements['weather-content'].children[0].children[2].children[2];
+  const outgoing = slot.children[0];
+  screen.run('signalSlot.shownAt = Date.now() - WeatherSignals.ROTATE_MS; updateWeatherSignal()');
+  assert.equal(slot.children.length, 2);
+  const incoming = slot.children[1];
+  assert.equal(incoming.classList.contains('entering'), true);
+  screen.finishTransitions();
+  assert.deepEqual(slot.children, [incoming]);
+  assert.equal(incoming.classList.contains('entering'), false);
+  assert.equal(outgoing.parentElement, null);
 });
 
 test('display markup has no app header, story count, article link, or quote collection link', () => {

@@ -57,7 +57,7 @@ test('wind always joins the astronomy item with strength and direction icons', (
   const item = wind(weather, WeatherVisual, '19103:10/14/2026');
   assert.equal(item.kind, 'wind');
   assert.equal(item.title, 'Wind · 4 mph');
-  assert.equal(item.detail, 'From west');
+  assert.equal(item.detail, 'West');
   assert.equal(item.icons.length, 2);
   assert.ok(['windsock-calm', 'windsock-weak', 'wind-spinner', 'windmill'].includes(item.icons[0]));
   assert.equal(item.icons[1], 'wind-direction-w');

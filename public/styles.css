@@ -42,6 +42,7 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .signal-text { min-width:0; }
 .signal-title { color:var(--text); font-size:clamp(12px,1vw,21px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .signal-detail { font-size:clamp(10px,.8vw,16px); margin-top:2px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.signal-item[data-kind=wind] .signal-detail { font-size:clamp(12px,1vw,21px); }
 .signal-item[data-severity=Moderate] .signal-title { color:#efc66d; }
 .signal-item[data-severity=Severe] .signal-title,.signal-item[data-severity=Extreme] .signal-title { color:#ee9b63; }
 .weather-art { justify-self:center; width:min(32vw,44vh); width:min(32vw,44dvh); aspect-ratio:1; border-radius:50%; background:radial-gradient(circle,#8ca9bb12,transparent 65%); }
