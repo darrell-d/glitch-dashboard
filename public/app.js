@@ -164,7 +164,7 @@ function renderWeather(data) {
   const details = node('div', 'weather-detail');
   details.append(node('div', '', `Feels like ${number(now.apparent_temperature)}°F / ${celsius(now.apparent_temperature)}°C`));
   const atmosphere = node('div', 'weather-atmosphere');
-  atmosphere.append(node('span', '', `Humidity ${number(now.relative_humidity_2m)}%`), node('span', 'weather-separator', '·'));
+  atmosphere.append(node('span', '', `Humidity ${number(now.relative_humidity_2m)}%`));
   const direction = WeatherVisual.windDirection(now.wind_direction_10m);
   const wind = node('span', 'wind-reading');
   wind.setAttribute('aria-label', `Wind ${number(now.wind_speed_10m)} miles per hour${direction ? ` from ${WIND_DIRECTION_NAMES[direction]}` : ''}`);
