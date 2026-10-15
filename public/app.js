@@ -68,6 +68,8 @@ function node(tag, className, text) {
 }
 function number(value) { return Number.isFinite(value) ? Math.round(value) : '–'; }
 function celsius(value) { return number((value - 32) * 5 / 9); }
+const WIND_DIRECTION_NAMES = { n: 'north', ne: 'northeast', e: 'east', se: 'southeast',
+  s: 'south', sw: 'southwest', w: 'west', nw: 'northwest' };
 function displayHour(stamp, index) {
   if (index === 0) return 'NOW';
   const hour = Number(stamp.slice(11, 13));
@@ -161,7 +163,23 @@ function renderWeather(data) {
   conditions.append(node('p', 'condition-label', condition(now.weather_code)));
   const details = node('div', 'weather-detail');
   details.append(node('div', '', `Feels like ${number(now.apparent_temperature)}°F / ${celsius(now.apparent_temperature)}°C`));
-  details.append(node('div', '', `Humidity ${number(now.relative_humidity_2m)}% · Wind ${number(now.wind_speed_10m)} mph`));
+  const atmosphere = node('div', 'weather-atmosphere');
+  atmosphere.append(node('span', '', `Humidity ${number(now.relative_humidity_2m)}%`), node('span', 'weather-separator', '·'));
+  const direction = WeatherVisual.windDirection(now.wind_direction_10m);
+  const wind = node('span', 'wind-reading');
+  wind.setAttribute('aria-label', `Wind ${number(now.wind_speed_10m)} miles per hour${direction ? ` from ${WIND_DIRECTION_NAMES[direction]}` : ''}`);
+  const windStrength = node('span', 'wind-strength-icon');
+  const localDay = new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeZone: config.timezone }).format(new Date());
+  const strengthName = WeatherVisual.windStrengthIcon(now.wind_speed_10m, `${config.postal_code}:${localDay}`);
+  windStrength.innerHTML = WeatherVisual.named(strengthName, iconStyle, options.weatherIconColor);
+  wind.append(windStrength, node('span', 'wind-speed', `${number(now.wind_speed_10m)} mph`));
+  if (direction) {
+    const directionIcon = node('span', 'wind-direction-icon');
+    directionIcon.innerHTML = WeatherVisual.named(`wind-direction-${direction}`, iconStyle, options.weatherIconColor);
+    wind.append(directionIcon, node('span', 'wind-direction-label', direction.toUpperCase()));
+  }
+  atmosphere.append(wind);
+  details.append(atmosphere);
   const signal = node('div', 'weather-signal');
   signal.setAttribute('aria-live', 'polite');
   conditions.append(details, signal);

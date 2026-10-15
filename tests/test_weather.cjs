@@ -2,7 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const { appearance, description, icon, iconUrl, safeColor, slug, styleForWeek } = require('../public/weather.js');
+const { appearance, description, icon, iconUrl, safeColor, slug, styleForWeek,
+  windDirection, windStrengthIcon } = require('../public/weather.js');
 
 test('day/night imagery uses sun and moon for clear and partly cloudy skies', () => {
   assert.equal(appearance(0, true), 'sun');
@@ -51,4 +52,28 @@ test('monochrome icons accept a safe custom color', () => {
   assert.match(icon(0, true, 'monochrome', 'red;display:none'), /style="color:#dce7d6;/);
   assert.equal(safeColor('#ABCDEF'), '#ABCDEF');
   assert.equal(safeColor('not-a-color'), '#dce7d6');
+});
+
+test('wind direction selects the nearest Meteocons compass point', () => {
+  assert.equal(windDirection(0), 'n');
+  assert.equal(windDirection(44), 'ne');
+  assert.equal(windDirection(181), 's');
+  assert.equal(windDirection(359), 'n');
+  assert.equal(windDirection(-45), 'nw');
+  assert.equal(windDirection(null), null);
+});
+
+test('wind strength selects stable icons for weak, moderate, and very windy conditions', () => {
+  const weak = ['windsock-calm', 'windsock-weak', 'wind-spinner', 'windmill'];
+  assert.ok(weak.includes(windStrengthIcon(4, '19103:10/14/2026')));
+  assert.equal(windStrengthIcon(4, '19103:10/14/2026'), windStrengthIcon(4, '19103:10/14/2026'));
+  assert.equal(windStrengthIcon(12, 'seed'), 'windsock-moderate');
+  assert.equal(windStrengthIcon(24, 'seed'), 'windsock-moderate');
+  assert.ok(['windsock', 'wind'].includes(windStrengthIcon(25, 'seed')));
+  for (const style of ['fill', 'flat', 'line', 'monochrome']) {
+    for (const name of [...weak, 'windsock-moderate', 'windsock', 'wind',
+      ...['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'].map((point) => `wind-direction-${point}`)]) {
+      assert.ok(fs.existsSync(path.join(__dirname, `../public/meteocons/${style}/${name}.svg`)));
+    }
+  }
 });

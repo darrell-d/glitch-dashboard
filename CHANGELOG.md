@@ -4,6 +4,8 @@
 
 ### Features
 
+- Show Meteocons wind-strength and compass-direction icons beside the current wind speed,
+  with stable daily variety for light and high winds.
 - Add NASA picture screens: the five newest Images of the Day plus five daily random
   NASA Image Library photos, three shuffled per batch in random, non-adjacent positions.
 - Prefer stories with photos when a feed provides them (e.g. a new NYT entry posted

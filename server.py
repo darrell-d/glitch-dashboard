@@ -85,7 +85,7 @@ def parse_quote(raw):
 def weather_url(latitude, longitude, timezone_name):
     query = urllib.parse.urlencode({
         "latitude": latitude, "longitude": longitude,
-        "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day,uv_index",
+        "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,is_day,uv_index",
         "hourly": "temperature_2m,weather_code,precipitation_probability,is_day",
         "daily": "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset",
         "temperature_unit": "fahrenheit", "wind_speed_unit": "mph",
@@ -237,7 +237,8 @@ def add_temperatures(places, raw):
 def parse_weather(raw):
     data = json.loads(raw)
     current, hourly, daily = data["current"], data["hourly"], data["daily"]
-    for key in ("temperature_2m", "apparent_temperature", "relative_humidity_2m", "weather_code", "wind_speed_10m"):
+    for key in ("temperature_2m", "apparent_temperature", "relative_humidity_2m", "weather_code",
+                "wind_speed_10m", "wind_direction_10m"):
         if not isinstance(current[key], (float, int)) or not math.isfinite(current[key]):
             raise ValueError("Missing current weather")
     if not daily["time"] or any(len(daily[key]) != len(daily["time"]) for key in (

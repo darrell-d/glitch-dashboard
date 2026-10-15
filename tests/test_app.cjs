@@ -155,7 +155,7 @@ test('direct story URL opens a photo page once feed data is available', async ()
 
 test('weather renders night-aware central imagery and five forecast icons', async () => {
   const weather = { current: { temperature_2m: 68, apparent_temperature: 68, weather_code: 0,
-    is_day: 0, relative_humidity_2m: 85, wind_speed_10m: 9 }, hourly: {
+    is_day: 0, relative_humidity_2m: 85, wind_speed_10m: 9, wind_direction_10m: 225 }, hourly: {
     time: Array.from({ length: 12 }, (_, i) => `2026-10-14T${String(i + 10).padStart(2, '0')}:00`),
     temperature_2m: Array.from({ length: 12 }, (_, i) => 68 + i),
     weather_code: [0, 1, 2, 3, 51, 61, 80, 0, 1, 2, 3, 45],
@@ -177,11 +177,15 @@ test('weather renders night-aware central imagery and five forecast icons', asyn
   assert.equal(hourly.children[1].children.length, 12);
   assert.equal(hourly.children[1].children[0].children[0].textContent, 'NOW');
   assert.match(hourly.children[1].children[5].attributes['aria-label'], /35% chance of precipitation/);
+  const wind = summary.children[2].children[1].children[1].children[2];
+  assert.match(wind.attributes['aria-label'], /9 miles per hour from southwest/);
+  assert.match(wind.children[0].innerHTML, /\/(windsock-calm|windsock-weak|wind-spinner|windmill)\.svg/);
+  assert.match(wind.children[2].innerHTML, /\/wind-direction-sw\.svg/);
 });
 
 test('weather icon style can be fixed in settings', async () => {
   const weather = { current: { temperature_2m: 68, apparent_temperature: 68, weather_code: 0,
-    is_day: 1, relative_humidity_2m: 50, wind_speed_10m: 4 }, hourly: {
+    is_day: 1, relative_humidity_2m: 50, wind_speed_10m: 4, wind_direction_10m: 90 }, hourly: {
     time: Array.from({ length: 12 }, (_, i) => `2026-10-14T${String(i + 10).padStart(2, '0')}:00`),
     temperature_2m: Array(12).fill(68), weather_code: Array(12).fill(0),
     precipitation_probability: Array(12).fill(0), is_day: Array(12).fill(1) }, daily: {

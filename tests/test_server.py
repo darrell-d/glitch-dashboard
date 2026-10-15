@@ -134,7 +134,7 @@ class AdapterTests(unittest.TestCase):
         raw = {
             "current": {"temperature_2m": 70, "apparent_temperature": 70,
                         "relative_humidity_2m": 55, "weather_code": 1,
-                        "wind_speed_10m": 8, "is_day": 1},
+                        "wind_speed_10m": 8, "wind_direction_10m": 225, "is_day": 1},
             "hourly": {"time": [f"2026-10-14T{hour:02d}:00" for hour in range(12)],
                        "temperature_2m": [70] * 12, "weather_code": [1] * 12,
                        "precipitation_probability": [10] * 12, "is_day": [1] * 12},

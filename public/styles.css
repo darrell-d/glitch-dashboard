@@ -28,6 +28,12 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .conditions { text-align:right; }
 .condition-label { font-family:var(--serif); font-size:clamp(28px,3.5vw,78px); margin:0 0 1vh; }
 .weather-detail { color:var(--dim); font-size:clamp(13px,1.2vw,26px); line-height:1.8; }
+.weather-atmosphere,.wind-reading { display:flex; justify-content:flex-end; align-items:center; gap:.38em; }
+.weather-separator { margin:0 .08em; }
+.wind-strength-icon { width:clamp(24px,1.8vw,38px); height:clamp(24px,1.8vw,38px); }
+.wind-direction-icon { width:clamp(20px,1.5vw,32px); height:clamp(20px,1.5vw,32px); margin-left:.15em; }
+.wind-strength-icon img,.wind-direction-icon img { display:block; width:100%; height:100%; object-fit:contain; }
+.wind-direction-label { color:var(--text); font-size:.72em; font-weight:600; letter-spacing:.08em; }
 /* Variable slot: rotating alerts, or the next sunrise, sunset, moonrise, or moon phase. */
 .weather-signal { position:relative; overflow:hidden; width:62%; margin:2vh 0 0 auto; border-top:1px solid var(--line); height:calc(clamp(40px,3.6vw,76px) + 1.5vh + 4px); color:var(--dim); }
 .signal-item { position:absolute; inset:0; display:flex; justify-content:flex-end; align-items:center; gap:12px; padding-top:1.5vh; }

@@ -45,6 +45,9 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   US pollen still lacks a provider.
 - Weather includes a compact next-12-hours strip with time, condition, Fahrenheit
   temperature, and precipitation probability; keep the current reading dominant.
+- Current wind uses Meteocons for both strength and eight-point compass direction:
+  light winds rotate daily among calm/weak windsocks, wind spinner, and windmill;
+  moderate winds use the moderate windsock; high winds use windsock or wind.
 - Weather location is a browser-saved US ZIP code, defaulting to 19103. The server
   resolves it to coordinates and timezone; do not hardcode a city into display logic.
 - Regional radar uses four recent RainViewer frames over visible OpenStreetMap tiles,

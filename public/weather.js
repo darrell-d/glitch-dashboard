@@ -65,6 +65,22 @@
     }
     return `<img src="${url}" alt="" aria-hidden="true">`;
   }
+  function windDirection(degrees) {
+    if (!Number.isFinite(degrees)) return null;
+    const points = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
+    return points[Math.round((((degrees % 360) + 360) % 360) / 45) % points.length];
+  }
+  function stableChoice(items, seed = '') {
+    let hash = 0;
+    for (const character of String(seed)) hash = (Math.imul(hash, 31) + character.charCodeAt(0)) | 0;
+    return items[Math.abs(hash) % items.length];
+  }
+  function windStrengthIcon(speed, seed = '') {
+    if (!Number.isFinite(speed)) return 'wind';
+    if (speed < 12) return stableChoice(['windsock-calm', 'windsock-weak', 'wind-spinner', 'windmill'], seed);
+    if (speed < 25) return 'windsock-moderate';
+    return stableChoice(['windsock', 'wind'], seed);
+  }
   const svgCache = new Map();
   async function hydrate(root) {
     if (!root || typeof root.querySelectorAll !== 'function' || typeof fetch !== 'function') return;
@@ -84,7 +100,7 @@
     }));
   }
   const api = { STYLES, appearance, slug, description, weekIndex, styleForWeek, resolveStyle,
-    iconUrl, namedUrl, safeColor, icon, named, hydrate };
+    iconUrl, namedUrl, safeColor, icon, named, windDirection, windStrengthIcon, hydrate };
   if (typeof module !== 'undefined') module.exports = api;
   else root.WeatherVisual = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
