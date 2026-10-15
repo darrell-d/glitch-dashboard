@@ -439,7 +439,9 @@ def wikimedia_thumbnail(url, width=2048):
 
 def parse_wikimedia_potd(raw, limit=5):
     photos = []
-    for entry in ET.fromstring(raw).findall("{http://www.w3.org/2005/Atom}entry"):
+    entries = ET.fromstring(raw).findall("{http://www.w3.org/2005/Atom}entry")
+    entries.sort(key=lambda entry: entry.findtext("{http://www.w3.org/2005/Atom}updated", ""), reverse=True)
+    for entry in entries:
         parsed = featured_summary(entry.findtext("{http://www.w3.org/2005/Atom}summary", ""))
         image = parsed.images[0] if parsed.images else {}
         url = wikimedia_thumbnail(image.get("src"))
@@ -459,7 +461,9 @@ def parse_wikimedia_potd(raw, limit=5):
 
 def parse_wikimedia_motd(raw, limit=3):
     videos = []
-    for entry in ET.fromstring(raw).findall("{http://www.w3.org/2005/Atom}entry"):
+    entries = ET.fromstring(raw).findall("{http://www.w3.org/2005/Atom}entry")
+    entries.sort(key=lambda entry: entry.findtext("{http://www.w3.org/2005/Atom}updated", ""), reverse=True)
+    for entry in entries:
         parsed = featured_summary(entry.findtext("{http://www.w3.org/2005/Atom}summary", ""))
         choices = []
         for source in parsed.sources:

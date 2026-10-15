@@ -289,6 +289,16 @@ class WikimediaMediaTests(unittest.TestCase):
         self.assertEqual(photo["description"], "A bird over the sea.")
         self.assertEqual(photo["credit"], "Wikimedia Commons contributors")
 
+    def test_featured_feeds_choose_newest_entries_from_ascending_feed(self):
+        import html
+        def entry(day, name):
+            summary = f'''<div><img src="https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/{name}.jpg/330px-{name}.jpg">
+              <div class="description en">{name}</div></div>'''
+            return f'<entry><updated>2026-10-{day}T00:00:00Z</updated><summary>{html.escape(summary)}</summary></entry>'
+        raw = f'<feed xmlns="http://www.w3.org/2005/Atom">{entry("06", "Old")}{entry("15", "New")}</feed>'
+        photo = parse_wikimedia_potd(raw, limit=1)[0]
+        self.assertEqual((photo["description"], photo["published"]), ("New", "2026-10-15T00:00:00Z"))
+
     def test_media_of_the_day_chooses_1080p_video(self):
         summary = '''<div><video poster="https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Film.webm/330px-Film.webm.jpg"
           data-durationhint="42" data-mwtitle="Film.webm"><source
