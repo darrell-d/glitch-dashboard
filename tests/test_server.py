@@ -195,6 +195,7 @@ class SettingsTests(unittest.TestCase):
 
     def test_defaults_until_saved_then_persisted(self):
         self.assertEqual(self.store.get()["screen_durations"]["markets"], 60)
+        self.assertEqual(self.store.get()["screen_durations"]["weather"], 60)
         self.store.save({"screen_durations": {"markets": 90}})
         reloaded = SettingsStore(self.store.path).get()["screen_durations"]
         self.assertEqual(reloaded["markets"], 90)

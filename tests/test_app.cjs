@@ -110,6 +110,15 @@ test('the photo wall stays up five minutes by default', async () => {
   assert.equal(screen.elements.article.classList.contains('active'), true);
 });
 
+test('weather stays up one minute by default', async () => {
+  const screen = await app();
+  screen.run("showPanel(screens.findIndex((item) => item.panel === 'weather'))");
+  screen.advance(59000);
+  assert.equal(screen.elements.weather.classList.contains('active'), true);
+  screen.advance(2000);
+  assert.equal(screen.elements.weather.classList.contains('active'), false);
+});
+
 test('screen times come from the server and are saved from the settings tab', async () => {
   const screen = await app('', { settings: { screen_durations: { article: 10, weather: 30, radar: 30, markets: 60, quote: 30, gallery: 300 } } });
   assert.equal(screen.elements.article.classList.contains('active'), true);
@@ -156,6 +165,12 @@ test('featured video owns rotation until playback ends', async () => {
   screen.run("showPanel(screens.findIndex((item) => item.panel === 'media'))");
   assert.equal(screen.elements.media.classList.contains('active'), true);
   assert.equal(screen.elements['media-video'].playing, true);
+  screen.elements['media-video'].duration = 120;
+  screen.elements['media-video'].currentTime = 30;
+  screen.advance(1);
+  assert.equal(screen.elements['media-progress-remaining'].style.transform, 'scaleX(0.75)');
+  assert.equal(screen.elements['media-time-remaining'].textContent, '1:30 left');
+  assert.equal(screen.elements['media-progress'].attributes['aria-valuenow'], '90');
   screen.advance(600000);
   assert.equal(screen.elements.media.classList.contains('active'), true);
   screen.elements['media-video'].onended();

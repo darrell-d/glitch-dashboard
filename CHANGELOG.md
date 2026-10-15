@@ -4,6 +4,8 @@
 
 ### Features
 
+- Default the weather screen to one minute and show a smooth remaining-time bar on
+  featured videos until playback completes.
 - Listen on all interfaces (`0.0.0.0`) by default, including in Compose, so other devices
   on the home network can open the dashboard; `--host 127.0.0.1` keeps it local.
 - The weather ticker always shows the next rise or set: whichever of sunrise, sunset, or

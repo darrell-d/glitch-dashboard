@@ -33,7 +33,7 @@ DEFAULT_POSTAL_CODE = "19103"
 CITY_CATALOG = ROOT / "data" / "us-major-cities.json"
 SETTINGS_PATH = Path(os.environ.get("DASHBOARD_SETTINGS", ROOT / "data" / "settings.json"))
 # Seconds each kind of screen stays up; editable from Settings and shared by every display.
-SCREEN_DURATIONS = {"article": 30, "weather": 30, "radar": 30, "markets": 60, "quote": 30, "gallery": 300, "picture": 20}
+SCREEN_DURATIONS = {"article": 30, "weather": 60, "radar": 30, "markets": 60, "quote": 30, "gallery": 300, "picture": 20}
 DURATION_LIMITS = (5, 3600)
 NASA_IOTD_URL = "https://www.nasa.gov/feeds/iotd-feed/"
 NASA_IMAGES_URL = "https://images-api.nasa.gov"

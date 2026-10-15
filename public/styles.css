@@ -171,6 +171,11 @@ blockquote { font-family:var(--serif); font-size:clamp(32px,5.6vw,124px); line-h
 .media-caption { max-width:min(1400px,82vw); margin:.8vh 0 0; font:400 clamp(22px,2.2vw,48px)/1.15 var(--serif); }
 .media-credit { margin-top:1vh; color:#c9cec7; font-size:clamp(10px,.75vw,16px); }
 .media-sound { margin-top:.6vh; color:var(--dim); font-size:clamp(10px,.75vw,16px); letter-spacing:.06em; }
+.media-progress { position:absolute; z-index:3; right:0; bottom:0; left:0; height:clamp(26px,3vh,42px); opacity:0; transition:opacity .25s ease; pointer-events:none; }
+.media-progress[data-ready=true] { opacity:1; }
+.media-time-remaining { position:absolute; right:clamp(18px,2vw,44px); bottom:clamp(9px,1.1vh,16px); color:#f3f1e6; font:600 clamp(10px,.7vw,15px)/1 var(--sans); letter-spacing:.08em; text-shadow:0 1px 8px #000; }
+.media-progress-track { position:absolute; right:0; bottom:0; left:0; height:clamp(4px,.45vh,8px); background:#ffffff2b; }
+.media-progress-track > div { width:100%; height:100%; background:var(--accent); transform:scaleX(0); transform-origin:left center; will-change:transform; }
 body[data-view=media] .footer { opacity:0; pointer-events:none; }
 /* Photo wall: rows of story photos drifting in alternating directions; each track holds its set twice. */
 .panel.gallery { padding:4vh 0; justify-content:center; }

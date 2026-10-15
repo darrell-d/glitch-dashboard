@@ -19,7 +19,7 @@ instant transitions and the weather icon style; its **Screen times** tab sets ho
 seconds each kind of screen stays up. Screen times are saved on the server in
 `data/settings.json` (git-ignored; override the path with `DASHBOARD_SETTINGS`) and
 shared by every display, which picks up changes within a minute. Defaults: stories,
-weather, radar, and quote 30 seconds, markets 60, photo wall 300, pictures 20; soft fade, a Meteocons style that changes each calendar week, and ZIP
+radar, and quote 30 seconds, weather and markets 60, photo wall 300, pictures 20; soft fade, a Meteocons style that changes each calendar week, and ZIP
 code 19103. Changing the ZIP updates weather, clock timezone, and regional radar.
 Controls appear when hovering over or focusing the footer, and on small screens.
 
@@ -103,7 +103,7 @@ picked once per day from astronomy and planetary topics with filters that skip c
 codes, ground operations, and thin descriptions, plus five official
 [Wikimedia Commons pictures of the day](https://commons.wikimedia.org/wiki/Commons:Picture_of_the_day).
 The official Commons media-of-the-day feed supplies direct video transcodes and posters;
-one video appears per edition and controls its own duration. No API key is needed. Reuters and the
+one video appears per edition, controls its own duration, and shows a shrinking remaining-time bar. No API key is needed. Reuters and the
 Guardian were considered: Reuters prohibits automated collection, and the Guardian's free
 API tier excludes current photo galleries.
 

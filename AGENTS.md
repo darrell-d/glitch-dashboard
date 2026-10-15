@@ -14,7 +14,7 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
 - Daily pictures: five newest NASA Images of the Day, five daily random NASA Image Library picks,
   and five Wikimedia Commons pictures of the day (`load_pictures`), three per batch in random
   non-adjacent gaps (`createEdition`). One Wikimedia media-of-the-day video is also inserted per
-  batch, autoplays muted, and owns rotation until playback ends. Do not
+  batch, autoplays muted, owns rotation until playback ends, and shows a remaining-time bar. Do not
   scrape Reuters, NYT, or Bloomberg pages (automated collection prohibited or blocked); the
   Guardian's free API tier excludes current galleries.
 - Rotation core: three individual story pages, weather, regional radar, an S&P 500 market heatmap
@@ -67,7 +67,7 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   content as live data.
 - Keep upstream refresh intervals independent from panel rotation.
 - Confirmed defaults: ZIP 19103, Fahrenheit first with Celsius alongside,
-  NYT homepage headlines, and 30-second panels (markets 60, photo wall 300).
+  NYT homepage headlines, and 30-second panels (weather and markets 60, photo wall 300).
 - Keep source/category expansion easy; detailed news preferences are deferred.
 - `sources.py` configures NYT, CNN, Kotaku, WSJ, The Atlantic, POLITICO, WIRED,
   Ars Technica, TechCrunch, The New Yorker, St. Lucia Times, The Voice St. Lucia,

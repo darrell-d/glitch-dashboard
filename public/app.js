@@ -38,7 +38,7 @@ function validOptions(value) {
     && (value.weatherIconColor === undefined || /^#[0-9a-f]{6}$/i.test(value.weatherIconColor));
 }
 // Seconds per kind of screen. The server keeps the shared values; this browser keeps a copy.
-const SCREEN_DURATIONS = { article: 30, weather: 30, radar: 30, markets: 60, quote: 30, gallery: 300, picture: 20 };
+const SCREEN_DURATIONS = { article: 30, weather: 60, radar: 30, markets: 60, quote: 30, gallery: 300, picture: 20 };
 const SCREEN_TYPES = Object.keys(SCREEN_DURATIONS);
 function validDurations(value) {
   return Object.fromEntries(Object.entries(value || {}).filter(([screen, seconds]) =>
@@ -508,9 +508,27 @@ function renderPicture(photo) {
 // Video sound: M toggles it; remembered on this browser. Browsers block audio until the viewer
 // interacts, so an unmuted start that is refused falls back to muted playback.
 let soundOn = readStored('glitch-video-sound') === true;
+let mediaDurationHint = 0;
 function showSoundState(blocked = false) {
   $('media-sound').textContent = soundOn && !blocked ? 'Sound on · press M to mute'
     : blocked ? 'Muted until you interact · press M for sound' : 'Muted · press M for sound';
+}
+function formatMediaTime(seconds) {
+  const whole = Math.max(0, Math.ceil(seconds));
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}
+function updateMediaProgress() {
+  const video = $('media-video');
+  const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : mediaDurationHint;
+  const current = Number.isFinite(video.currentTime) ? video.currentTime : 0;
+  const ready = duration > 0;
+  const remaining = ready ? Math.max(0, duration - current) : 0;
+  $('media-progress-remaining').style.transform = `scaleX(${ready ? Math.min(1, remaining / duration) : 0})`;
+  $('media-time-remaining').textContent = ready ? `${formatMediaTime(remaining)} left` : '';
+  $('media-progress').dataset.ready = String(ready);
+  $('media-progress').setAttribute('aria-valuemax', String(ready ? Math.ceil(duration) : 0));
+  $('media-progress').setAttribute('aria-valuenow', String(Math.ceil(remaining)));
+  $('media-progress').setAttribute('aria-label', ready ? `${formatMediaTime(remaining)} remaining` : 'Video duration loading');
 }
 function startVideo(video) {
   video.muted = !soundOn;
@@ -541,6 +559,11 @@ function renderMedia(item) {
   video.poster = item.poster || '';
   video.src = item.url;
   video.type = item.type || 'video/webm';
+  mediaDurationHint = Number.isFinite(Number(item.duration)) ? Number(item.duration) : 0;
+  video.onloadedmetadata = updateMediaProgress;
+  video.ondurationchange = updateMediaProgress;
+  video.ontimeupdate = updateMediaProgress;
+  updateMediaProgress();
   $('media-kicker').textContent = item.kicker || 'Wikimedia media of the day';
   $('media-caption').textContent = item.title || '';
   $('media-credit').textContent = item.credit || '';
@@ -650,6 +673,7 @@ function setPaused(value) {
 }
 function tick() {
   if (screens[current]?.panel === 'media') {
+    updateMediaProgress();
     $('progress').style.transform = 'scaleX(0)';
     $('article-progress').style.transform = 'scaleX(0)';
     return;
