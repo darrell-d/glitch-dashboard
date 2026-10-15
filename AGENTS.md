@@ -50,7 +50,7 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   condition, Feels/Humidity/Celsius, and a framed ticker. Right: next-12-hours relative
   temperature curve (warmest at top) with icon/hour/rain chance, and five-day range bars on
   one shared week scale. Keep the current reading dominant.
-- The ticker slides up every 4s (`WeatherSignals.tickerItems`): active warnings first (NWS,
+- The ticker slides up every 10s (`WeatherSignals.tickerItems`): active warnings first (NWS,
   UV 6+), then air quality (always; Meteocons code-* colors follow EPA bands), the next rise
   or set (always: whichever of sunrise, sunset, or moonrise comes first; `nextSkyEvent`), wind
   (always; `wind-direction-*` Meteocons, strength icons when direction is missing), and the
@@ -69,7 +69,8 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   content as live data.
 - Keep upstream refresh intervals independent from panel rotation.
 - Confirmed defaults: ZIP 19103, Fahrenheit first with Celsius alongside,
-  NYT homepage headlines, and 30-second panels (weather and markets 60, photo wall 300).
+  NYT homepage headlines, and 30-second story/quote panels (weather and radar 120,
+  markets 60, photo wall 300).
 - Keep source/category expansion easy; detailed news preferences are deferred.
 - `sources.py` configures NYT, CNN, Kotaku, WSJ, The Atlantic, POLITICO, WIRED,
   Ars Technica, TechCrunch, The New Yorker, St. Lucia Times, The Voice St. Lucia,

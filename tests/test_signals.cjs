@@ -2,7 +2,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const MoonPhase = require('../public/moon.js');
 const WeatherVisual = require('../public/weather.js');
-const { nextSkyEvent, tickerItems, alertIcon, wind } = require('../public/signals.js');
+const { nextSkyEvent, tickerItems, alertIcon, wind, ROTATE_MS } = require('../public/signals.js');
+
+test('weather signals rotate every ten seconds', () => {
+  assert.equal(ROTATE_MS, 10000);
+});
 
 // Philadelphia, Oct 14-15 2026 (EDT, UTC-4).
 const place = { latitude: 39.95, longitude: -75.16 };

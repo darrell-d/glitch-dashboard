@@ -4,9 +4,11 @@
 
 ### Features
 
+- Default both weather screens (conditions and radar) to two minutes, and hold each
+  air-quality, sky-event, wind, or moon ticker item for ten seconds.
 - Add one modern political cartoon published by The Guardian within the previous
   seven days to every rotation batch, using its highest-resolution uncropped rendition.
-- Default the weather screen to one minute and show a smooth remaining-time bar on
+- Show a smooth remaining-time bar on
   featured videos until playback completes.
 - Listen on all interfaces (`0.0.0.0`) by default, including in Compose, so other devices
   on the home network can open the dashboard; `--host 127.0.0.1` keeps it local.

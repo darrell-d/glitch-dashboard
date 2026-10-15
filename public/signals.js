@@ -4,7 +4,7 @@
   // The weather ticker: warnings first, then air quality, the next rise or set, wind, and the moon.
   const UV_THRESHOLD = 6;
   const AQI_THRESHOLD = 101;
-  const ROTATE_MS = 4000;
+  const ROTATE_MS = 10000;
 
   function localTime(stamp, offsetSeconds) {
     // Open-Meteo daily times are local wall-clock strings such as 2026-10-14T07:10.

@@ -39,7 +39,7 @@ function validOptions(value) {
     && (value.weatherIconColor === undefined || /^#[0-9a-f]{6}$/i.test(value.weatherIconColor));
 }
 // Seconds per kind of screen. The server keeps the shared values; this browser keeps a copy.
-const SCREEN_DURATIONS = { article: 30, weather: 60, radar: 30, markets: 60, quote: 30, gallery: 300, picture: 20 };
+const SCREEN_DURATIONS = { article: 30, weather: 120, radar: 120, markets: 60, quote: 30, gallery: 300, picture: 20 };
 const SCREEN_TYPES = Object.keys(SCREEN_DURATIONS);
 function validDurations(value) {
   return Object.fromEntries(Object.entries(value || {}).filter(([screen, seconds]) =>

@@ -110,13 +110,15 @@ test('the photo wall stays up five minutes by default', async () => {
   assert.equal(screen.elements.article.classList.contains('active'), true);
 });
 
-test('weather stays up one minute by default', async () => {
+test('weather and radar each stay up two minutes by default', async () => {
   const screen = await app();
-  screen.run("showPanel(screens.findIndex((item) => item.panel === 'weather'))");
-  screen.advance(59000);
-  assert.equal(screen.elements.weather.classList.contains('active'), true);
-  screen.advance(2000);
-  assert.equal(screen.elements.weather.classList.contains('active'), false);
+  for (const panel of ['weather', 'radar']) {
+    screen.run(`showPanel(screens.findIndex((item) => item.panel === '${panel}'))`);
+    screen.advance(119000);
+    assert.equal(screen.elements[panel].classList.contains('active'), true);
+    screen.advance(2000);
+    assert.equal(screen.elements[panel].classList.contains('active'), false);
+  }
 });
 
 test('screen times come from the server and are saved from the settings tab', async () => {

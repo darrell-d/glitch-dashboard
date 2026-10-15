@@ -18,8 +18,8 @@ Open **http://localhost:8080**. Settings (bottom right) controls fade, slide, or
 instant transitions and the weather icon style; its **Screen times** tab sets how many
 seconds each kind of screen stays up. Screen times are saved on the server in
 `data/settings.json` (git-ignored; override the path with `DASHBOARD_SETTINGS`) and
-shared by every display, which picks up changes within a minute. Defaults: stories,
-radar, and quote 30 seconds, weather and markets 60, photo wall 300, pictures 20; soft fade, a Meteocons style that changes each calendar week, and ZIP
+shared by every display, which picks up changes within a minute. Defaults: stories and
+quote 30 seconds, weather and radar 120, markets 60, photo wall 300, pictures 20; soft fade, a Meteocons style that changes each calendar week, and ZIP
 code 19103. Changing the ZIP updates weather, clock timezone, and regional radar.
 Controls appear when hovering over or focusing the footer, and on small screens.
 
@@ -54,7 +54,7 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   Settings. The monochrome color is also configurable, with a light sage default
   chosen for the dark green display. The pinned SVG assets are served locally
   for display reliability.
-  A framed ticker at the bottom left slides up through items every four seconds: active
+  A framed ticker at the bottom left slides up through items every ten seconds: active
   warnings first (National Weather Service alerts such as heat, cold, fire, tornado, and
   hurricane; UV index 6+), then air quality (always shown, with an EPA-colored level icon),
   the next sunrise, sunset, or moonrise in time order (always), wind speed and direction (always),
