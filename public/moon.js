@@ -76,6 +76,32 @@
     };
   }
 
+  function altitude(date, latitude, longitude) {
+    const days = toDays(date);
+    const moon = moonCoordinates(days);
+    const phi = RAD * latitude;
+    const hourAngle = RAD * (280.16 + 360.9856235 * days) + RAD * longitude - moon.ra;
+    const height = Math.asin(Math.sin(phi) * Math.sin(moon.dec) + Math.cos(phi) * Math.cos(moon.dec) * Math.cos(hourAngle));
+    // Atmospheric refraction, as used by the standard low-precision rise/set calculation.
+    return height + RAD * 0.017 / Math.tan(height + RAD * 10.26 / (height + RAD * 5.10));
+  }
+
+  // Next time the moon's upper limb clears the horizon, scanning forward up to `hours`.
+  function nextRise(date, latitude, longitude, hours = 36) {
+    const horizon = RAD * 0.133;
+    const step = 10 * 60000;
+    let previousTime = date.valueOf();
+    let previous = altitude(date, latitude, longitude) - horizon;
+    for (let time = previousTime + step; time <= previousTime + hours * 3600000 + step; time += step) {
+      const current = altitude(new Date(time), latitude, longitude) - horizon;
+      if (previous < 0 && current >= 0) {
+        return new Date(time - step + step * (-previous / (current - previous)));
+      }
+      previous = current;
+    }
+    return null;
+  }
+
   function info(date = new Date()) {
     const { fraction, phase } = position(date);
     const phases = [
@@ -97,7 +123,7 @@
     };
   }
 
-  const api = { info, position };
+  const api = { info, position, altitude, nextRise };
   if (typeof module !== 'undefined') module.exports = api;
   else root.MoonPhase = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

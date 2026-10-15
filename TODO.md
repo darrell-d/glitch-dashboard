@@ -10,7 +10,8 @@
 - [x] Add a compact next-12-hours forecast beneath current conditions.
 - [x] Polish hourly spacing/dividers and correct crescent phase masking.
 - [x] Use Meteocons with weekly style rotation, a settings override, and a configurable monochrome color.
-- [ ] Add air quality, smoke, pollen, and other local weather-event data after choosing a layout.
+- [x] Rotate NWS alerts, unhealthy air quality, and high UV in the weather slot; show sunrise/sunset/moonrise/phase otherwise.
+- [ ] Add a US pollen provider (Open-Meteo pollen is Europe-only).
 - [x] Add a ZIP-centered full-screen regional map with animated precipitation radar and major-city temperatures.
 - [x] Follow observed radar with six free hourly precipitation forecast frames and a distinct key.
 - [x] Make weather, timezone, and radar location browser-configurable by US ZIP code.

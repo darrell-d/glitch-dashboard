@@ -2,18 +2,25 @@
 
 const $ = (id) => document.getElementById(id);
 const names = ['news', 'weather', 'radar', 'quote'];
-const panels = ['news', 'article', 'weather', 'radar', 'quote'];
+const panels = ['news', 'article', 'weather', 'radar', 'markets', 'quote', 'gallery', 'picture'];
+const GALLERY_ROWS = 3;
+const GALLERY_MIN_PHOTOS = 6;
+// Photo-wall rows cycle standard, faster, slower; the standard pace is 14 seconds per photo.
+const GALLERY_SECONDS_PER_PHOTO = 14;
+const GALLERY_ROW_SPEEDS = [1, 1.5, 0.65];
+const hasPhoto = (item) => typeof item.image_url === 'string' && item.image_url.startsWith('https://');
 let screens = DashboardEdition.createEdition([]);
 const records = {};
 let config = { location: 'Local weather', region: '', postal_code: '19103', timezone: 'America/New_York' };
-let options = { duration: 30, transition: 'fade', postalCode: '19103', weatherIconStyle: 'weekly', weatherIconColor: '#dce7d6' };
+let options = { transition: 'fade', postalCode: '19103', weatherIconStyle: 'weekly', weatherIconColor: '#dce7d6' };
 let current = 0;
-let newsOffset = 0;
+// URLs already shown this cycle, so new stories go into the next batch.
+let shownStories = new Set();
+let shownPictures = new Set();
 let paused = false;
 let started = performance.now();
 let elapsed = 0;
 let pendingArticle = location.hash === '#article';
-let rotationItems = [];
 
 function readStored(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
@@ -22,11 +29,32 @@ function store(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Storage may be disabled. */ }
 }
 function validOptions(value) {
-  return value && Number.isFinite(value.duration) && value.duration >= 5 && value.duration <= 600
-    && ['fade', 'slide', 'none'].includes(value.transition)
+  return value && ['fade', 'slide', 'none'].includes(value.transition)
     && (value.postalCode === undefined || /^\d{5}(?:-\d{4})?$/.test(value.postalCode))
     && (value.weatherIconStyle === undefined || ['weekly', ...WeatherVisual.STYLES].includes(value.weatherIconStyle))
     && (value.weatherIconColor === undefined || /^#[0-9a-f]{6}$/i.test(value.weatherIconColor));
+}
+// Seconds per kind of screen. The server keeps the shared values; this browser keeps a copy.
+const SCREEN_DURATIONS = { article: 30, weather: 30, radar: 30, markets: 60, quote: 30, gallery: 300, picture: 20 };
+const SCREEN_TYPES = Object.keys(SCREEN_DURATIONS);
+function validDurations(value) {
+  return Object.fromEntries(Object.entries(value || {}).filter(([screen, seconds]) =>
+    SCREEN_TYPES.includes(screen) && Number.isInteger(seconds) && seconds >= 5 && seconds <= 3600));
+}
+let screenDurations = { ...SCREEN_DURATIONS, ...validDurations(readStored('glitch-screen-durations')) };
+const screenSeconds = (panel) => screenDurations[panel === 'news' ? 'article' : panel] || SCREEN_DURATIONS.article;
+function applySettings(settings) {
+  screenDurations = { ...SCREEN_DURATIONS, ...validDurations(settings?.screen_durations) };
+  store('glitch-screen-durations', screenDurations);
+}
+async function loadSettings() {
+  try { applySettings(await request('/api/settings')); } catch { /* Keep this browser's last known times. */ }
+}
+async function saveSettings(durations) {
+  const response = await fetch('/api/settings', { method: 'POST', cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ screen_durations: durations }) });
+  if (!response.ok) throw new Error('Settings not saved');
+  applySettings(await response.json());
 }
 const savedOptions = readStored('glitch-display-options');
 if (validOptions(savedOptions)) options = { ...options, ...savedOptions };
@@ -55,8 +83,7 @@ function renderNews(data) {
   }));
   // Start directly with stories once available, then finish each fixed batch.
   if (screens.some((screen) => screen.panel === 'article')) return;
-  rotationItems = data.items.map((item) => ({ ...item }));
-  screens = DashboardEdition.createEdition(rotationItems, newsOffset);
+  nextEdition(data.items);
   current = 0;
   showPanel(0);
 }
@@ -74,7 +101,7 @@ function renderArticle(screen) {
   $('article-date').dateTime = Number.isFinite(published.getTime()) ? published.toISOString() : '';
   const image = $('article-image');
   const backdrop = $('article-backdrop');
-  const hasImage = typeof item.image_url === 'string' && item.image_url.startsWith('https://');
+  const hasImage = hasPhoto(item);
   $('article').classList.toggle('paper-no-image', !hasImage);
   image.onerror = () => {
     $('article').classList.add('paper-no-image');
@@ -135,16 +162,9 @@ function renderWeather(data) {
   const details = node('div', 'weather-detail');
   details.append(node('div', '', `Feels like ${number(now.apparent_temperature)}°F / ${celsius(now.apparent_temperature)}°C`));
   details.append(node('div', '', `Humidity ${number(now.relative_humidity_2m)}% · Wind ${number(now.wind_speed_10m)} mph`));
-  const moon = MoonPhase.info(new Date());
-  const lunar = node('div', 'moon-phase');
-  lunar.setAttribute('aria-label', `Moon: ${moon.name}, ${moon.illumination}% illuminated`);
-  const disc = node('span', 'moon-disc');
-  disc.dataset.phase = moon.key;
-  disc.setAttribute('aria-hidden', 'true');
-  const lunarText = node('div');
-  lunarText.append(node('div', 'moon-name', moon.name), node('div', 'moon-illumination', `${moon.illumination}% illuminated`));
-  lunar.append(disc, lunarText);
-  conditions.append(details, lunar);
+  const signal = node('div', 'weather-signal');
+  signal.setAttribute('aria-live', 'polite');
+  conditions.append(details, signal);
   summary.append(temperatures, illustration, conditions);
   const hourlySection = node('section', 'hourly-section');
   hourlySection.setAttribute('aria-label', 'Next 12 hours');
@@ -182,7 +202,55 @@ function renderWeather(data) {
     forecast.append(column);
   });
   content.replaceChildren(summary, hourlySection, forecast);
+  signalSlot = { ...signalSlot, element: signal, data, current: null, iconStyle };
+  updateWeatherSignal();
   WeatherVisual.hydrate(content);
+}
+
+// The slot keeps its rotation position across the minute-by-minute weather re-render.
+let signalSlot = { id: '', shownAt: 0 };
+const signalId = (item) => `${item.icon}|${item.title}`;
+function signalItem(item) {
+  const element = node('div', 'signal-item');
+  element.dataset.kind = item.kind;
+  if (item.severity) element.dataset.severity = item.severity;
+  element.setAttribute('role', 'img');
+  element.setAttribute('aria-label', item.label);
+  const icon = node('span', 'signal-icon');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = WeatherVisual.named(item.icon, signalSlot.iconStyle, options.weatherIconColor);
+  const text = node('div', 'signal-text');
+  text.append(node('div', 'signal-title', item.title), node('div', 'signal-detail', item.detail));
+  element.append(icon, text);
+  return element;
+}
+function updateWeatherSignal() {
+  if (!signalSlot.element) return;
+  const now = Date.now();
+  const items = WeatherSignals.items(now, signalSlot.data, config, MoonPhase, config.timezone);
+  const found = items.findIndex((item) => signalId(item) === signalSlot.id);
+  const due = now - signalSlot.shownAt >= WeatherSignals.ROTATE_MS;
+  const index = found < 0 ? 0 : items.length > 1 && due ? (found + 1) % items.length : found;
+  const item = items[index];
+  if (signalSlot.current && index === found) {
+    // Same item: refresh countdown text such as "in 42 min" without animating.
+    const detail = signalSlot.current.children[1].children[1];
+    if (detail.textContent !== item.detail) detail.textContent = item.detail;
+    signalSlot.current.setAttribute('aria-label', item.label);
+    return;
+  }
+  const incoming = signalItem(item);
+  const outgoing = signalSlot.current;
+  if (outgoing) {
+    outgoing.classList.add('leaving');
+    incoming.classList.add('entering');
+    signalSlot.element.append(incoming);
+    const container = signalSlot.element;
+    setTimeout(() => { if (container === signalSlot.element) container.replaceChildren(signalSlot.current); }, 800);
+  } else signalSlot.element.replaceChildren(incoming);
+  if (index !== found) signalSlot.shownAt = now;
+  Object.assign(signalSlot, { current: incoming, id: signalId(item) });
+  WeatherVisual.hydrate(incoming);
 }
 
 let radarFrames = [];
@@ -347,12 +415,64 @@ function openPendingArticle() {
     showPanel(index);
   }
 }
+function renderPicture(photo) {
+  const image = $('picture-image');
+  $('picture-backdrop').src = photo.url;
+  image.src = photo.url;
+  image.alt = photo.title;
+  $('picture-kicker').textContent = photo.kicker;
+  $('picture-caption').textContent = photo.title;
+  $('picture-description').textContent = photo.description;
+  $('picture-credit').textContent = photo.credit ? `Image: ${photo.credit}` : '';
+}
+async function refreshPictures() {
+  try {
+    const value = await request('/api/pictures');
+    if (value.data?.photos) records.pictures = value;
+  } catch { /* Picture screens are optional; skip them until the feed is available. */ }
+}
+function nextEdition(items) {
+  const batch = DashboardEdition.pickStories(items, shownStories);
+  shownStories = batch.shown;
+  const photos = items.filter(hasPhoto);
+  const gallery = photos.length >= GALLERY_MIN_PHOTOS;
+  // NASA pictures: a few shuffled, not-yet-shown photos dropped into random gaps.
+  const dayPictures = records.pictures?.data?.photos || [];
+  const pictureBatch = DashboardEdition.pickStories(DashboardEdition.shuffle(dayPictures), shownPictures,
+    Math.min(DashboardEdition.PICTURES_PER_BATCH, dayPictures.length));
+  shownPictures = pictureBatch.shown;
+  pictureBatch.items.forEach((photo) => { const preload = new Image(); preload.src = photo.url; });
+  screens = DashboardEdition.createEdition(batch.items, { gallery, pictures: pictureBatch.items });
+  // Build the photo wall with the batch so its images load well before it appears.
+  if (gallery) renderGallery(photos);
+}
+function renderGallery(photos) {
+  const rows = Array.from({ length: GALLERY_ROWS }, (_, row) => photos.filter((_, i) => i % GALLERY_ROWS === row));
+  $('gallery-rows').replaceChildren(...rows.filter((row) => row.length).map((items, row) => {
+    // Repeat short rows so one set is wider than the screen, then double it for a seamless loop.
+    while (items.length < 8) items = items.concat(items);
+    const track = node('div', 'gallery-track');
+    track.style.animationDuration = `${Math.round(items.length * GALLERY_SECONDS_PER_PHOTO / GALLERY_ROW_SPEEDS[row % GALLERY_ROW_SPEEDS.length])}s`;
+    [...items, ...items].forEach((item, i) => {
+      const tile = node('figure', 'gallery-tile');
+      const image = node('img');
+      image.alt = i < items.length ? item.title : '';
+      if (i >= items.length) tile.setAttribute('aria-hidden', 'true');
+      image.decoding = 'async';
+      image.onerror = () => { tile.hidden = true; };
+      image.src = item.image_url;
+      tile.append(image);
+      track.append(tile);
+    });
+    const element = node('div', 'gallery-row');
+    element.append(track);
+    return element;
+  }));
+}
 function showPanel(index) {
   if (index >= screens.length) {
     if (records.news) {
-      newsOffset = (newsOffset + Math.min(3, records.news.data.items.length)) % records.news.data.items.length;
-      rotationItems = records.news.data.items.map((item) => ({ ...item }));
-      screens = DashboardEdition.createEdition(rotationItems, newsOffset);
+      nextEdition(records.news.data.items);
       current = 0;
     }
     index = 0;
@@ -368,6 +488,7 @@ function showPanel(index) {
     $(name).setAttribute('aria-hidden', String(!active));
   });
   if (screen.panel === 'article') renderArticle(screen);
+  if (screen.panel === 'picture') renderPicture(screen.item);
   if (screen.panel === 'radar') showRadarFrame(radarFrameIndex);
   if (screen.panel === 'quote') { refresh('quote'); requestAnimationFrame(fitQuote); }
   history.replaceState(null, '', `#${screen.panel}`);
@@ -383,10 +504,11 @@ function setPaused(value) {
   $('pause').setAttribute('aria-label', paused ? 'Resume rotation' : 'Pause rotation');
 }
 function tick() {
-  const total = options.duration * 1000;
+  const total = screenSeconds(screens[current]?.panel) * 1000;
   let used = elapsed + (paused ? 0 : performance.now() - started);
   if (used >= total && !paused) { showPanel(current + 1); used = 0; }
-  const countdown = paused ? 'Ⅱ' : `${Math.max(0, Math.ceil((total - used) / 1000))}s`;
+  // No numeric countdown on the display; only show a paused marker.
+  const countdown = paused ? 'Ⅱ' : '';
   if ($('countdown').textContent !== countdown) $('countdown').textContent = countdown;
   $('progress').style.transform = `scaleX(${Math.min(1, used / total)})`;
   $('article-progress').style.transform = $('progress').style.transform;
@@ -421,7 +543,8 @@ let wasPaused = false;
 $('settings').addEventListener('click', () => {
   wasPaused = paused;
   setPaused(true);
-  $('duration').value = options.duration;
+  SCREEN_TYPES.forEach((screen) => { $(`time-${screen}`).value = screenDurations[screen]; });
+  showSettingsTab('display');
   $('transition').value = options.transition;
   $('postal-code').value = options.postalCode;
   $('weather-icon-style').value = options.weatherIconStyle;
@@ -429,9 +552,30 @@ $('settings').addEventListener('click', () => {
   $('settings-dialog').returnValue = '';
   $('settings-dialog').showModal();
 });
+function showSettingsTab(name) {
+  for (const tab of ['display', 'times']) {
+    const selected = tab === name;
+    $(`settings-tab-${tab}`).setAttribute('aria-selected', String(selected));
+    $(`settings-tab-${tab}`).tabIndex = selected ? 0 : -1;
+    $(`settings-panel-${tab}`).hidden = !selected;
+  }
+}
+$('settings-tab-display').addEventListener('click', () => showSettingsTab('display'));
+$('settings-tab-times').addEventListener('click', () => showSettingsTab('times'));
 $('settings-dialog').addEventListener('close', async () => {
   if ($('settings-dialog').returnValue === 'save') {
-    const value = { duration: Number($('duration').value), transition: $('transition').value,
+    const durations = Object.fromEntries(SCREEN_TYPES.map((screen) => [screen, Number($(`time-${screen}`).value)]));
+    if (Object.keys(validDurations(durations)).length === SCREEN_TYPES.length) {
+      try {
+        await saveSettings(durations);
+        $('screen-times-status').textContent = '';
+      } catch {
+        applySettings({ screen_durations: durations });
+        $('screen-times-status').textContent = 'The server could not save these times; they apply on this browser only.';
+      }
+      resetTimer();
+    }
+    const value = { transition: $('transition').value,
       postalCode: $('postal-code').value.slice(0, 5), weatherIconStyle: $('weather-icon-style').value,
       weatherIconColor: $('weather-icon-color').value };
     if (validOptions(value)) {
@@ -483,6 +627,23 @@ window.addEventListener('hashchange', () => {
 });
 if (document.fonts) document.fonts.ready.then(() => { fitQuote(); fitArticle(); });
 
+// TradingView's free, embeddable heatmap: it loads its own live data inside an iframe.
+const MARKETS_WIDGET = {
+  dataSource: 'SPX500', grouping: 'sector', blockSize: 'market_cap_basic', blockColor: 'change',
+  locale: 'en', colorTheme: 'dark', isTransparent: true, hasTopBar: false, isDataSetEnabled: false,
+  isZoomEnabled: false, hasSymbolTooltip: false, isMonoSize: false, width: '100%', height: '100%',
+};
+function renderMarkets() {
+  const container = node('div', 'tradingview-widget-container');
+  const widget = node('div', 'tradingview-widget-container__widget');
+  const script = document.createElement('script');
+  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-stock-heatmap.js';
+  script.async = true;
+  script.textContent = JSON.stringify(MARKETS_WIDGET);
+  container.append(widget, script);
+  $('markets-widget').replaceChildren(container);
+}
+
 async function init() {
   try { config = await request(`/api/config?${locationQuery()}`); } catch { /* Keep known initial defaults. */ }
   updateClock();
@@ -498,8 +659,10 @@ async function init() {
     }
     refresh(name);
   }
+  renderMarkets();
+  await Promise.all([loadSettings(), refreshPictures()]);
   resetTimer();
-  setInterval(() => { refresh('news'); refresh('weather'); refresh('radar'); }, 60000);
+  setInterval(() => { refresh('news'); refresh('weather'); refresh('radar'); loadSettings(); refreshPictures(); }, 60000);
   setInterval(() => refresh('quote'), 90000);
   setInterval(() => { if (document.body.dataset.view === 'radar') showRadarFrame(radarFrameIndex + 1); }, 1200);
   setInterval(updateStatuses, 10000);
@@ -510,4 +673,5 @@ function animateProgress() {
 }
 requestAnimationFrame(animateProgress);
 setInterval(updateClock, 1000);
+setInterval(updateWeatherSignal, 1000);
 init();

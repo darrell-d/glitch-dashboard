@@ -28,19 +28,20 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 .conditions { text-align:right; }
 .condition-label { font-family:var(--serif); font-size:clamp(28px,3.5vw,78px); margin:0 0 1vh; }
 .weather-detail { color:var(--dim); font-size:clamp(13px,1.2vw,26px); line-height:1.8; }
-.moon-phase { display:flex; justify-content:flex-end; align-items:center; gap:12px; border-top:1px solid var(--line); margin-top:2vh; padding-top:1.5vh; color:var(--dim); }
-.moon-disc { position:relative; flex:0 0 auto; width:clamp(28px,2.6vw,54px); aspect-ratio:1; overflow:hidden; border:1px solid #51635a; border-radius:50%; background:#101815; box-shadow:0 0 20px #9dbcb71f; }
-.moon-disc[data-phase=full] { background:#dce7d6; }
-.moon-disc[data-phase=first-quarter] { background:linear-gradient(90deg,#101815 50%,#dce7d6 50%); }
-.moon-disc[data-phase=last-quarter] { background:linear-gradient(90deg,#dce7d6 50%,#101815 50%); }
-.moon-disc[data-phase=waxing-crescent],.moon-disc[data-phase=waning-crescent],.moon-disc[data-phase=waxing-gibbous],.moon-disc[data-phase=waning-gibbous] { background:#dce7d6; }
-.moon-disc[data-phase=waxing-crescent]::after,.moon-disc[data-phase=waning-crescent]::after,.moon-disc[data-phase=waxing-gibbous]::after,.moon-disc[data-phase=waning-gibbous]::after { content:''; position:absolute; inset:0; border-radius:50%; background:#101815; }
-.moon-disc[data-phase=waxing-crescent]::after { transform:translateX(-22%); }
-.moon-disc[data-phase=waning-crescent]::after { transform:translateX(22%); }
-.moon-disc[data-phase=waxing-gibbous]::after { transform:translateX(-68%); }
-.moon-disc[data-phase=waning-gibbous]::after { transform:translateX(68%); }
-.moon-name { color:var(--text); font-size:clamp(12px,1vw,21px); }
-.moon-illumination { font-size:clamp(10px,.8vw,16px); margin-top:2px; }
+/* Variable slot: rotating alerts, or the next sunrise, sunset, moonrise, or moon phase. */
+.weather-signal { position:relative; overflow:hidden; width:62%; margin:2vh 0 0 auto; border-top:1px solid var(--line); height:calc(clamp(40px,3.6vw,76px) + 1.5vh + 4px); color:var(--dim); }
+.signal-item { position:absolute; inset:0; display:flex; justify-content:flex-end; align-items:center; gap:12px; padding-top:1.5vh; }
+.signal-item.entering { animation:signal-in .7s cubic-bezier(.2,.7,.2,1) both; }
+.signal-item.leaving { animation:signal-out .7s cubic-bezier(.4,0,.6,1) both; }
+@keyframes signal-in { from { transform:translateY(100%); opacity:0; } to { transform:none; opacity:1; } }
+@keyframes signal-out { from { transform:none; opacity:1; } to { transform:translateY(-100%); opacity:0; } }
+.signal-icon { flex:0 0 auto; width:clamp(40px,3.6vw,76px); aspect-ratio:1; }
+.signal-icon img { display:block; width:100%; aspect-ratio:1; object-fit:contain; }
+.signal-text { min-width:0; }
+.signal-title { color:var(--text); font-size:clamp(12px,1vw,21px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.signal-detail { font-size:clamp(10px,.8vw,16px); margin-top:2px; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.signal-item[data-severity=Moderate] .signal-title { color:#efc66d; }
+.signal-item[data-severity=Severe] .signal-title,.signal-item[data-severity=Extreme] .signal-title { color:#ee9b63; }
 .weather-art { justify-self:center; width:min(32vw,44vh); width:min(32vw,44dvh); aspect-ratio:1; border-radius:50%; background:radial-gradient(circle,#8ca9bb12,transparent 65%); }
 .weather-art[data-kind=sun],.weather-art[data-kind=partly-day] { background:radial-gradient(circle,#eab65518,transparent 65%); }
 .weather-art img { display:block; width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 16px 35px #8fa8b122); }
@@ -108,6 +109,31 @@ h1 { font-family:var(--serif); font-size:clamp(36px,5vw,110px); font-weight:400;
 blockquote { font-family:var(--serif); font-size:clamp(32px,5.6vw,124px); line-height:1.12; margin:0; letter-spacing:-.015em; overflow-wrap:anywhere; }
 .quote-author { border-top:1px solid var(--line); font-size:clamp(14px,1.4vw,32px); color:var(--accent); margin:3.5vh 0 0; padding-top:2vh; }
 .quote-author:before { content:'— '; color:var(--dim); }
+/* Markets: TradingView heatmap fills the screen; a translucent label floats in its bottom bar. */
+.panel.markets { padding:clamp(8px,1.2vh,16px) clamp(8px,.8vw,16px) clamp(14px,2.2vh,28px); }
+.markets-title { position:absolute; z-index:2; right:clamp(64px,4.6vw,96px); bottom:calc(clamp(14px,2.2vh,28px) + 7px); display:flex; align-items:baseline; gap:.6em; padding:.3em .85em; border-radius:999px; background:#101815a6; -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); font-family:var(--serif); font-size:clamp(14px,1.1vw,24px); line-height:1; pointer-events:none; }
+.markets-title span { color:var(--dim); font-family:var(--sans); font-size:.5em; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+.markets-widget,.markets-widget .tradingview-widget-container,.markets-widget .tradingview-widget-container__widget { width:100%; height:100%; }
+.markets-widget iframe { display:block; width:100%; height:100%; border:0; }
+/* Picture of the day: uncropped photo over a blurred copy, with location, caption, and credit. */
+.panel.picture { padding:0; background:#0b100e; overflow:hidden; }
+.picture-backdrop { position:absolute; inset:-60px; width:calc(100% + 120px); height:calc(100% + 120px); max-width:none; object-fit:cover; filter:blur(36px) brightness(.45) saturate(1.1); }
+.picture-image { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+.picture-caption-block { position:absolute; left:0; right:0; bottom:0; padding:12vh clamp(24px,4.5vw,100px) clamp(40px,6vh,80px); background:linear-gradient(180deg,transparent,#000000b8 55%); text-shadow:0 1px 12px #000; }
+.picture-kicker { color:var(--accent); font-size:clamp(11px,.9vw,20px); font-weight:700; letter-spacing:.12em; text-transform:uppercase; margin-bottom:1vh; }
+.picture-caption { max-width:min(1400px,80vw); margin:0; font-family:var(--serif); font-size:clamp(22px,2.2vw,48px); font-weight:400; line-height:1.15; }
+.picture-description { max-width:min(1200px,70vw); margin:1vh 0 0; color:#e6e6d6; font-size:clamp(12px,1vw,22px); line-height:1.45; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.picture-credit { margin-top:1.2vh; color:var(--dim); font-size:clamp(10px,.75vw,16px); }
+/* Photo wall: rows of story photos drifting in alternating directions; each track holds its set twice. */
+.panel.gallery { padding:4vh 0; justify-content:center; }
+.gallery-rows { display:grid; grid-template-rows:repeat(3,minmax(0,1fr)); gap:1.4vh; height:100%; overflow:hidden; -webkit-mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent); mask:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent); }
+.gallery-row { min-height:0; overflow:hidden; }
+.gallery-track { display:flex; gap:1.4vh; height:100%; width:max-content; animation:gallery-drift linear infinite; will-change:transform; }
+.gallery-row:nth-child(even) .gallery-track { animation-direction:reverse; }
+.panel:not(.active) .gallery-track { animation-play-state:paused; }
+@keyframes gallery-drift { from { transform:translateX(-50%); } to { transform:translateX(0); } }
+.gallery-tile { margin:0; height:100%; padding-right:0; flex:0 0 auto; }
+.gallery-tile img { display:block; height:100%; width:auto; max-width:none; border-radius:3px; background:#17221d; }
 .quote-author:empty:before { content:none; }
 .footer { position:fixed; z-index:5; bottom:0; left:0; right:0; display:flex; align-items:center; gap:20px; min-height:64px; padding:10px clamp(24px,4.5vw,100px) 14px; }
 body[data-view=article] .footer { visibility:hidden; pointer-events:none; }
@@ -127,6 +153,11 @@ dialog input,dialog select { width:100%; padding:10px; background:var(--bg); col
 .color-setting input[type=color] { height:40px; padding:3px; }
 dialog p { color:var(--dim); font-size:13px; line-height:1.6; }
 .eyebrow { color:var(--accent); font-size:11px; letter-spacing:.12em; }
+.settings-tabs { display:flex; gap:4px; border-bottom:1px solid var(--line); margin:-8px 0 4px; }
+.settings-tabs button { border:0; border-bottom:2px solid transparent; background:none; color:var(--dim); padding:8px 12px; margin-bottom:-1px; }
+.settings-tabs button[aria-selected=true] { color:var(--text); border-bottom-color:var(--accent); }
+.screen-times { display:grid; grid-template-columns:1fr 110px; align-items:center; gap:10px 16px; }
+.screen-times label { margin:0; }
 .dialog-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:25px; }
 .dialog-actions button { border:1px solid var(--line); border-radius:4px; background:none; color:var(--text); padding:10px 14px; }
 .dialog-actions .primary { background:var(--accent); color:var(--bg); }
@@ -140,9 +171,10 @@ dialog p { color:var(--dim); font-size:13px; line-height:1.6; }
   .celsius { transform:none; margin-top:1vh; }
   .condition-label { font-size:26px; }
   .weather-detail { font-size:11px; }
-  .moon-phase { gap:8px; }
-  .moon-name { font-size:11px; }
-  .moon-illumination { font-size:9px; }
+  .weather-signal { width:100%; }
+  .signal-item { gap:8px; }
+  .signal-title { font-size:11px; }
+  .signal-detail { font-size:9px; }
   .hourly-forecast { grid-template-columns:repeat(6,minmax(0,1fr)); }
   .hourly-hour:nth-child(7) { border-left:0; }
   .hourly-hour:nth-child(n+7) { border-top:1px solid var(--line); }
@@ -170,7 +202,8 @@ dialog p { color:var(--dim); font-size:13px; line-height:1.6; }
   .celsius { font-size:24px; margin-top:4px; transform:translateY(-4px); }
   .weather-art { width:28vh; }
   .condition-label { font-size:28px; }
-  .moon-phase { margin-top:6px; padding-top:6px; }
+  .weather-signal { margin-top:6px; }
+  .signal-item { padding-top:6px; }
   .hourly-label { margin-bottom:2px; }
   .hourly-hour { padding:2px; }
   .hourly-icon { width:26px; }
@@ -181,4 +214,4 @@ dialog p { color:var(--dim); font-size:13px; line-height:1.6; }
   .forecast-condition { display:none; }
 }
 @media(hover:none) { .controls { opacity:1; } }
-@media(prefers-reduced-motion:reduce) { .panel,body[data-transition=slide] .panel { transition:none; transform:none; } }
+@media(prefers-reduced-motion:reduce) { .panel,body[data-transition=slide] .panel { transition:none; transform:none; } .gallery-track { animation:none; } .signal-item.entering,.signal-item.leaving { animation-duration:.01s; } }

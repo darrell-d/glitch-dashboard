@@ -3,9 +3,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const { createEdition } = require('../public/edition.js');
+const DashboardEdition = require('../public/edition.js');
 const WeatherVisual = require('../public/weather.js');
 const MoonPhase = require('../public/moon.js');
+const WeatherSignals = require('../public/signals.js');
 const RadarMap = require('../public/radar.js');
 
 // Exercise the actual app's navigation/timer with a minimal DOM, without a browser.
@@ -33,7 +34,8 @@ class Element {
   showModal() { this.open = true; }
 }
 
-async function app(hash = '', { storyCount = 3, weather = null } = {}) {
+async function app(hash = '', { storyCount = 3, weather = null, settings = null, pictures = null } = {}) {
+  const posts = [];
   const markup = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
   const elements = Object.fromEntries([...markup.matchAll(/id="([^"]+)"/g)].map((match) => [match[1], new Element()]));
   const extras = { '.footer': new Element(), '.paper-story': new Element() };
@@ -52,12 +54,15 @@ async function app(hash = '', { storyCount = 3, weather = null } = {}) {
     querySelector: (selector) => extras[selector],
     addEventListener: (event, callback) => { listeners[event] = callback; },
   };
-  const context = vm.createContext({ document, location, DashboardEdition: { createEdition }, WeatherVisual, MoonPhase, RadarMap,
+  const context = vm.createContext({ document, location, DashboardEdition, WeatherVisual, MoonPhase, WeatherSignals, RadarMap,
     window: { addEventListener() {} }, history: { replaceState: (_, __, hash) => { location.hash = hash; } },
     localStorage: { getItem: () => null, setItem() {} }, performance: { now: () => now },
     getComputedStyle: () => ({ fontSize: '32px' }), requestAnimationFrame: (callback) => frames.push(callback),
-    setInterval() {}, setTimeout() {}, clearTimeout() {}, AbortController,
-    fetch: async (url) => ({ ok: true, json: async () => {
+    setInterval() {}, setTimeout() {}, clearTimeout() {}, AbortController, Image: class { },
+    fetch: async (url, init = {}) => ({ ok: true, json: async () => {
+      if (url === '/api/settings' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return JSON.parse(init.body); }
+      if (url === '/api/settings' && settings) return settings;
+      if (url === '/api/pictures' && pictures) return { data: { photos: pictures }, updated_at: new Date().toISOString(), stale: false };
       if (url.startsWith('/api/config')) return { location: 'Philadelphia', region: 'Pennsylvania', postal_code: '19103', latitude: 39.95, longitude: -75.16, timezone: 'America/New_York' };
       if (url === '/api/news') return { data: { items }, updated_at: new Date().toISOString(), stale: false };
       if (url.startsWith('/api/weather') && weather) return { data: weather, updated_at: new Date().toISOString(), stale: false };
@@ -71,7 +76,7 @@ async function app(hash = '', { storyCount = 3, weather = null } = {}) {
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
   await new Promise(setImmediate);
-  return { elements, extras, location, listeners,
+  return { elements, extras, location, listeners, posts,
     run: (code) => vm.runInContext(code, context), advance: (milliseconds) => { now += milliseconds; vm.runInContext('tick()', context); },
     frame: (milliseconds) => { now += milliseconds; const pending = frames.splice(0); pending.forEach((callback) => callback()); } };
 }
@@ -84,6 +89,55 @@ test('stories appear immediately and automatic rotation advances to the next sto
   assert.equal(screen.elements['article-title'].textContent, 'Story 1');
   assert.equal(screen.extras['.footer'].inert, true);
   assert.equal(screen.location.hash, '#article');
+});
+
+test('the photo wall stays up five minutes by default', async () => {
+  const screen = await app('', { storyCount: 6 });
+  screen.run("showPanel(screens.findIndex((item) => item.panel === 'gallery'))");
+  assert.equal(screen.elements.gallery.classList.contains('active'), true);
+  screen.advance(299000);
+  assert.equal(screen.elements.gallery.classList.contains('active'), true);
+  assert.equal(screen.elements.countdown.textContent, '');
+  screen.advance(2000);
+  assert.equal(screen.elements.gallery.classList.contains('active'), false);
+  assert.equal(screen.elements.article.classList.contains('active'), true);
+});
+
+test('screen times come from the server and are saved from the settings tab', async () => {
+  const screen = await app('', { settings: { screen_durations: { article: 10, weather: 30, radar: 30, markets: 60, quote: 30, gallery: 300 } } });
+  assert.equal(screen.elements.article.classList.contains('active'), true);
+  screen.advance(11000);
+  assert.equal(screen.elements['article-title'].textContent, 'Story 1');
+  screen.elements.settings.click();
+  assert.equal(screen.elements['time-markets'].value, 60);
+  assert.equal(screen.elements['settings-panel-times'].hidden, true);
+  screen.elements['settings-tab-times'].click();
+  assert.equal(screen.elements['settings-panel-times'].hidden, false);
+  assert.equal(screen.elements['settings-tab-times'].attributes['aria-selected'], 'true');
+  screen.elements['time-article'].value = '45';
+  screen.elements['settings-dialog'].returnValue = 'save';
+  await screen.elements['settings-dialog'].listeners.close();
+  assert.equal(screen.posts.length, 1);
+  assert.equal(screen.posts[0].screen_durations.article, 45);
+  screen.advance(40000);
+  assert.equal(screen.elements['article-title'].textContent, 'Story 1');
+  screen.advance(6000);
+  assert.equal(screen.elements['article-title'].textContent, 'Story 2');
+});
+
+test('NASA pictures appear in the next batch with title, description, and credit', async () => {
+  const pictures = [1, 2, 3, 4].map((i) => ({ url: `https://images-assets.nasa.gov/p${i}~large.jpg`, kicker: 'NASA Image of the Day',
+    title: `Title ${i}`, description: `Description ${i}`, credit: `Photographer ${i}` }));
+  const screen = await app('', { pictures });
+  screen.run('showPanel(screens.length)');
+  const shown = screen.run("screens.filter((item) => item.panel === 'picture').map((item) => item.item.url)");
+  assert.equal(shown.length, 3);
+  screen.run("showPanel(screens.findIndex((item) => item.panel === 'picture'))");
+  assert.equal(screen.elements.picture.classList.contains('active'), true);
+  assert.equal(screen.elements['picture-kicker'].textContent, 'NASA Image of the Day');
+  assert.match(screen.elements['picture-caption'].textContent, /^Title \d$/);
+  assert.match(screen.elements['picture-credit'].textContent, /^Image: Photographer \d$/);
+  assert.equal(screen.elements['picture-image'].src, screen.run("screens[current].item.url"));
 });
 
 test('direct story URL opens a photo page once feed data is available', async () => {
@@ -116,9 +170,10 @@ test('weather renders night-aware central imagery and five forecast icons', asyn
   assert.match(summary.children[1].attributes['aria-label'], /night/);
   assert.equal(forecast.children.length, 5);
   assert.ok(forecast.children.every((day) => day.children.some((child) => child.className === 'forecast-icon')));
-  const moon = summary.children[2].children[2];
-  assert.equal(moon.className, 'moon-phase');
-  assert.match(moon.attributes['aria-label'], /^Moon: /);
+  const slot = summary.children[2].children[2];
+  assert.equal(slot.className, 'weather-signal');
+  assert.equal(slot.children.length, 1);
+  assert.equal(slot.children[0].className, 'signal-item');
   assert.equal(hourly.children[1].children.length, 12);
   assert.equal(hourly.children[1].children[0].children[0].textContent, 'NOW');
   assert.match(hourly.children[1].children[5].attributes['aria-label'], /35% chance of precipitation/);
@@ -136,7 +191,7 @@ test('weather icon style can be fixed in settings', async () => {
   screen.elements['weather-icon-style'].value = 'monochrome';
   screen.elements['weather-icon-color'].value = '#c6f294';
   screen.elements['settings-dialog'].returnValue = 'save';
-  screen.elements['settings-dialog'].listeners.close();
+  await screen.elements['settings-dialog'].listeners.close();
   assert.match(screen.elements['weather-content'].children[0].children[1].innerHTML,
     /\/meteocons\/monochrome\/clear-day\.svg/);
   assert.match(screen.elements['weather-content'].children[0].children[1].innerHTML, /color:#c6f294/);

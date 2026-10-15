@@ -1,7 +1,10 @@
 """Local dashboard server and cached, fixed-upstream feed adapters."""
 
 import argparse
+import html
 import json
+import random
+import re
 import math
 import os
 import subprocess
@@ -9,8 +12,9 @@ import threading
 import time
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -21,8 +25,20 @@ ROOT = Path(__file__).parent
 QUOTE_URL = "https://darrelld.com/quote/json/random"
 GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 RAINVIEWER_URL = "https://api.rainviewer.com/public/weather-maps.json"
+AIR_QUALITY_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
+NWS_ALERTS_URL = "https://api.weather.gov/alerts/active"
+ALERT_SEVERITY = ("Extreme", "Severe", "Moderate", "Minor")
 DEFAULT_POSTAL_CODE = "19103"
 CITY_CATALOG = ROOT / "data" / "us-major-cities.json"
+SETTINGS_PATH = Path(os.environ.get("DASHBOARD_SETTINGS", ROOT / "data" / "settings.json"))
+# Seconds each kind of screen stays up; editable from Settings and shared by every display.
+SCREEN_DURATIONS = {"article": 30, "weather": 30, "radar": 30, "markets": 60, "quote": 30, "gallery": 300, "picture": 20}
+DURATION_LIMITS = (5, 3600)
+NASA_IOTD_URL = "https://www.nasa.gov/feeds/iotd-feed/"
+NASA_IMAGES_URL = "https://images-api.nasa.gov"
+# Specific subjects keep random archive picks on striking imagery rather than launch-pad snapshots.
+NASA_ARCHIVE_TOPICS = ("nebula", "galaxy", "star cluster", "supernova", "planetary nebula", "Jupiter",
+                       "Saturn", "Mars surface", "aurora", "Moon surface", "comet", "Earth at night")
 
 
 def fetch(url):
@@ -69,13 +85,52 @@ def parse_quote(raw):
 def weather_url(latitude, longitude, timezone_name):
     query = urllib.parse.urlencode({
         "latitude": latitude, "longitude": longitude,
-        "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day",
+        "current": "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day,uv_index",
         "hourly": "temperature_2m,weather_code,precipitation_probability,is_day",
-        "daily": "weather_code,temperature_2m_max,temperature_2m_min",
+        "daily": "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset",
         "temperature_unit": "fahrenheit", "wind_speed_unit": "mph",
         "timezone": timezone_name, "forecast_days": 5, "forecast_hours": 12,
     })
     return "https://api.open-meteo.com/v1/forecast?" + query
+
+
+def air_quality_url(latitude, longitude):
+    query = urllib.parse.urlencode({
+        "latitude": latitude, "longitude": longitude, "current": "us_aqi,pm2_5", "timezone": "auto",
+    })
+    return f"{AIR_QUALITY_URL}?{query}"
+
+
+def alerts_url(latitude, longitude):
+    return f"{NWS_ALERTS_URL}?point={latitude:.4f},{longitude:.4f}"
+
+
+def finite(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def parse_air_quality(raw):
+    current = json.loads(raw).get("current") or {}
+    if not finite(current.get("us_aqi")):
+        raise ValueError("Air quality index missing")
+    return {"us_aqi": round(current["us_aqi"]),
+            "pm2_5": current["pm2_5"] if finite(current.get("pm2_5")) else None}
+
+
+def parse_alerts(raw, limit=6):
+    alerts, seen = [], set()
+    for feature in json.loads(raw).get("features") or []:
+        item = feature.get("properties") or {}
+        event = item.get("event")
+        if (not isinstance(event, str) or item.get("status") != "Actual"
+                or item.get("messageType") == "Cancel" or event in seen):
+            continue
+        seen.add(event)
+        alerts.append({"event": event.strip(), "severity": item.get("severity") or "Unknown",
+                       "headline": item.get("headline") or "", "onset": item.get("onset"),
+                       "ends": item.get("ends") or item.get("expires")})
+    rank = {name: index for index, name in enumerate(ALERT_SEVERITY)}
+    return sorted(alerts, key=lambda alert: rank.get(alert["severity"], len(rank)))[:limit]
 
 
 def normalize_postal_code(value):
@@ -189,11 +244,29 @@ def parse_weather(raw):
         "temperature_2m_max", "temperature_2m_min", "weather_code"
     )):
         raise ValueError("Incomplete forecast")
+    if any(len(daily.get(key) or []) != len(daily["time"]) for key in ("sunrise", "sunset")):
+        daily = {key: value for key, value in daily.items() if key not in ("sunrise", "sunset")}
     if len(hourly["time"]) < 12 or any(len(hourly[key]) != len(hourly["time"]) for key in (
         "temperature_2m", "weather_code", "precipitation_probability", "is_day"
     )):
         raise ValueError("Incomplete hourly forecast")
-    return {"current": current, "hourly": hourly, "daily": daily}
+    offset = data.get("utc_offset_seconds")
+    return {"current": current, "hourly": hourly, "daily": daily,
+            "utc_offset_seconds": offset if finite(offset) else None}
+
+
+class WeatherFeed:
+    """Forecast plus independently cached, optional air-quality and alert feeds."""
+
+    def __init__(self, forecast, extras):
+        self.forecast, self.extras = forecast, extras
+
+    def get(self):
+        result = self.forecast.get()
+        if result["data"]:
+            result = {**result, "data": {**result["data"],
+                                         **{name: feed.get()["data"] for name, feed in self.extras.items()}}}
+        return result
 
 
 class Feed:
@@ -272,12 +345,21 @@ class LocationFeeds:
     def weather_feed(self, postal_code):
         postal_code = normalize_postal_code(postal_code)
         with self.lock:
-            return self.weather.setdefault(postal_code, Feed(lambda: self._load_weather(postal_code), 600))
+            if postal_code not in self.weather:
+                self.weather[postal_code] = WeatherFeed(Feed(lambda: self._load_weather(postal_code), 600), {
+                    "air_quality": Feed(lambda: self._load_extra(postal_code, air_quality_url, parse_air_quality), 1800),
+                    "alerts": Feed(lambda: self._load_extra(postal_code, alerts_url, parse_alerts), 300),
+                })
+            return self.weather[postal_code]
 
     def _load_weather(self, postal_code):
         location = self._resolved(postal_code)
         return parse_weather(self.fetcher(weather_url(
             location["latitude"], location["longitude"], location["timezone"])))
+
+    def _load_extra(self, postal_code, url, parse):
+        location = self._resolved(postal_code)
+        return parse(self.fetcher(url(location["latitude"], location["longitude"])))
 
     def radar_feed(self, postal_code):
         postal_code = normalize_postal_code(postal_code)
@@ -293,16 +375,147 @@ class LocationFeeds:
         return {**radar, "location": location, "cities": cities}
 
 
+def plain(value):
+    return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", value or "")).split())
+
+
+def description_text(value):
+    """Plain description without sentences that only point to a web address."""
+    sentences = re.split(r"(?<=[.!?])\s+", plain(value))
+    return " ".join(sentence for sentence in sentences if not re.search(r"https?://|www\.", sentence))
+
+
+def parse_nasa_iotd(raw, limit=5):
+    """Newest NASA Images of the Day (one per weekday), resized by NASA's image service."""
+    photos = []
+    for item in ET.fromstring(raw).findall("./channel/item"):
+        enclosure = item.find("enclosure")
+        url = enclosure.get("url", "") if enclosure is not None else ""
+        if not url.startswith("https://") or not enclosure.get("type", "").startswith("image/"):
+            continue
+        published = item.findtext("pubDate") or ""
+        photos.append({"url": f"{url}?w=2048", "title": plain(item.findtext("title")),
+                       "description": description_text(item.findtext("description")), "credit": "NASA",
+                       "kicker": "NASA Image of the Day", "published": published,
+                       "page_url": item.findtext("link") or ""})
+        if len(photos) == limit:
+            break
+    if not photos:
+        raise ValueError("NASA Image of the Day feed has no images")
+    return photos
+
+
+CODE_TITLE = re.compile(r"^[A-Z0-9]{2,8}[-_ ][A-Za-z0-9-]+$")
+# Ground operations and events are rarely striking on a wall display.
+MUNDANE = re.compile(r"\b(payload|encapsulat\w*|field ?work|test(s|ing)?|ceremony|meeting|briefing|"
+                     r"rollout|processing|technicians?|workers?|press|visitors?|experiments?)\b", re.I)
+
+
+def pick_nasa_archive(fetcher, day, count=5, attempts=20):
+    """A day's random picks from the NASA Image and Video Library (public domain), stable for that day."""
+    chooser = random.Random(day.isoformat())
+    picks, seen = [], set()
+    for _ in range(attempts):
+        if len(picks) == count:
+            break
+        topic = chooser.choice(NASA_ARCHIVE_TOPICS)
+        query = lambda **extra: f"{NASA_IMAGES_URL}/search?" + urllib.parse.urlencode(
+            {"q": topic, "media_type": "image", "page_size": 25, **extra})
+        hits = json.loads(fetcher(query(page_size=1)))["collection"]["metadata"]["total_hits"]
+        page = chooser.randint(1, max(1, min(hits, 10000) // 25))
+        candidates = []
+        for item in json.loads(fetcher(query(page=page)))["collection"]["items"]:
+            data = (item.get("data") or [{}])[0]
+            title, description = plain(data.get("title")), plain(data.get("description"))
+            if (data.get("nasa_id") and data["nasa_id"] not in seen and len(description) >= 80
+                    and not CODE_TITLE.match(title) and not MUNDANE.search(title)
+                    and data.get("center") not in ("KSC", "HQ")):
+                candidates.append(data)
+        if not candidates:
+            continue
+        data = chooser.choice(candidates)
+        seen.add(data["nasa_id"])
+        assets = [entry["href"] for entry in json.loads(fetcher(
+            f"{NASA_IMAGES_URL}/asset/{urllib.parse.quote(data['nasa_id'])}"))["collection"]["items"]]
+        url = next((href for size in ("~large.", "~medium.") for href in assets if size in href), "")
+        if not url:
+            continue
+        year = (data.get("date_created") or "")[:4]
+        picks.append({"url": url.replace("http://", "https://", 1), "title": plain(data.get("title")),
+                      "description": description_text(data.get("description")),
+                      "credit": plain(data.get("photographer") or data.get("secondary_creator") or "")
+                      or f"NASA/{data.get('center') or 'NASA'}",
+                      "kicker": f"From the NASA archive{f' · {year}' if year else ''}",
+                      "published": data.get("date_created"), "page_url": ""})
+    return picks
+
+
+def load_pictures(fetcher=None, now=None):
+    """Five newest NASA Images of the Day plus five random archive images for today."""
+    fetcher = fetcher or fetch
+    photos = []
+    try:
+        photos += parse_nasa_iotd(fetcher(NASA_IOTD_URL))
+    except Exception:
+        pass  # The archive half can still supply the day's pictures.
+    try:
+        photos += pick_nasa_archive(fetcher, (now or datetime.now(timezone.utc)).date())
+    except Exception:
+        pass
+    if not photos:
+        raise ValueError("NASA pictures unavailable")
+    return {"photos": photos}
+
+
+def parse_screen_durations(value):
+    if not isinstance(value, dict) or set(value) - set(SCREEN_DURATIONS):
+        raise ValueError("Unknown screen")
+    durations = dict(SCREEN_DURATIONS)
+    for screen, seconds in value.items():
+        if (not isinstance(seconds, int) or isinstance(seconds, bool)
+                or not DURATION_LIMITS[0] <= seconds <= DURATION_LIMITS[1]):
+            raise ValueError("Screen time must be 5-3600 whole seconds")
+        durations[screen] = seconds
+    return durations
+
+
+class SettingsStore:
+    """Dashboard-wide settings persisted as a small JSON file next to the server."""
+
+    def __init__(self, path=SETTINGS_PATH):
+        self.path, self.lock = Path(path), threading.Lock()
+
+    def get(self):
+        with self.lock:
+            try:
+                saved = json.loads(self.path.read_text())
+                return {"screen_durations": parse_screen_durations(saved.get("screen_durations", {}))}
+            except (OSError, ValueError, AttributeError):
+                return {"screen_durations": dict(SCREEN_DURATIONS)}
+
+    def save(self, value):
+        settings = {"screen_durations": parse_screen_durations((value or {}).get("screen_durations"))}
+        with self.lock:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = self.path.with_suffix(".tmp")
+            temporary.write_text(json.dumps(settings, indent=2) + "\n")
+            temporary.replace(self.path)
+        return settings
+
+
 def make_feeds():
     return {
         "news": NewsFeed({source["id"]: Feed(partial(load_source, source, fetch, fetch_head), 600) for source in SOURCES}),
         "quote": Feed(lambda: parse_quote(fetch(QUOTE_URL)), 90),
+        # One new Image of the Day per weekday; archive picks change daily.
+        "pictures": Feed(load_pictures, 6 * 3600),
     }
 
 
 class Handler(SimpleHTTPRequestHandler):
-    def __init__(self, *args, feeds, locations, default_postal_code, **kwargs):
+    def __init__(self, *args, feeds, locations, default_postal_code, settings=None, **kwargs):
         self.feeds, self.locations, self.default_postal_code = feeds, locations, default_postal_code
+        self.settings = settings or SettingsStore()
         super().__init__(*args, directory=str(ROOT / "public"), **kwargs)
 
     def do_GET(self):
@@ -310,6 +523,9 @@ class Handler(SimpleHTTPRequestHandler):
         path = parsed.path
         query = urllib.parse.parse_qs(parsed.query)
         postal_code = query.get("postal_code", [self.default_postal_code])[0]
+        if path == "/api/settings":
+            self.send_json(self.settings.get())
+            return
         if path == "/api/config":
             try:
                 result = self.locations.location(postal_code)
@@ -334,6 +550,26 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(result, 200 if result["data"] is not None else 503)
         else:
             super().do_GET()
+
+    def do_POST(self):
+        if urllib.parse.urlparse(self.path).path != "/api/settings":
+            self.send_json({"error": "Not found"}, 404)
+            return
+        # A JSON content type forces a CORS preflight, which this server never approves,
+        # so other websites cannot change settings through the visitor's browser.
+        length = int(self.headers.get("Content-Length") or 0)
+        if self.headers.get_content_type() != "application/json" or not 0 < length <= 4096:
+            self.send_json({"error": "Expected a small JSON body"}, 400)
+            return
+        try:
+            settings = self.settings.save(json.loads(self.rfile.read(length)))
+        except (ValueError, AttributeError) as error:
+            self.send_json({"error": str(error)}, 400)
+            return
+        except OSError:
+            self.send_json({"error": "Settings could not be saved"}, 500)
+            return
+        self.send_json(settings)
 
     def send_json(self, value, status=200):
         body = json.dumps(value, allow_nan=False).encode()

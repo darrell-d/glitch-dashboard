@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import Mock
 
 from server import NewsFeed
-from sources import SOURCES, parse_cnn, parse_news, parse_wordpress
+from sources import SOURCES, enrich_metadata, parse_cnn, parse_news, parse_wordpress
 
 SOURCE = {"id": "example", "name": "Example News", "url": "https://example.com/feed"}
 
@@ -11,7 +11,26 @@ SOURCE = {"id": "example", "name": "Example News", "url": "https://example.com/f
 class PublisherTests(unittest.TestCase):
     def test_all_requested_publishers_are_configured(self):
         self.assertEqual({source["id"] for source in SOURCES}, {
-            "nyt", "cnn", "kotaku", "wsj", "atlantic", "politico", "wired", "ars", "techcrunch", "newyorker"})
+            "nyt", "cnn", "kotaku", "wsj", "atlantic", "politico", "wired", "ars", "techcrunch", "newyorker",
+            "inquirer", "billypenn", "whyy", "onion", "aljazeera"})
+
+    def test_stories_with_photos_are_preferred_when_a_feed_has_them(self):
+        titles = ["Senate passes budget", "Astronomers find planet", "Museum restores statue",
+                  "Railway opens tomorrow", "Team wins championship", "Bakery celebrates centennial"]
+        entry = lambda i, image: (f"<item><title>{titles[i]}</title><link>https://example.com/{i}</link>"
+                                  + (f'<media:content xmlns:media="http://search.yahoo.com/mrss/" url="https://example.com/{i}.jpg" medium="image"/>' if image else "")
+                                  + "</item>")
+        raw = "<rss><channel>" + "".join(entry(i, i != 0) for i in range(6)) + "</channel></rss>"
+        urls = [item["url"] for item in parse_news(raw, SOURCE)["items"]]
+        self.assertNotIn("https://example.com/0", urls)
+        self.assertEqual(len(urls), 4)
+
+    def test_page_metadata_fills_only_missing_feed_fields(self):
+        selected = {"items": [{"url": "https://example.com/a", "description": "From the feed", "image_url": ""}]}
+        page = b'<meta property="og:image" content="https://example.com/a.jpg"><meta property="og:description" content="From the page">'
+        item = enrich_metadata(selected, lambda url: page)["items"][0]
+        self.assertEqual(item["image_url"], "https://example.com/a.jpg")
+        self.assertEqual(item["description"], "From the feed")
 
     def test_only_four_distinct_feed_stories_are_selected(self):
         titles = ["Pope Leo Has Lung Cancer", "What to Know About Pope Leo Lung Cancer",

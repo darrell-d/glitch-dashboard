@@ -4,6 +4,25 @@
 
 ### Features
 
+- Add NASA picture screens: the five newest Images of the Day plus five daily random
+  NASA Image Library photos, three shuffled per batch in random, non-adjacent positions.
+- Prefer stories with photos when a feed provides them (e.g. a new NYT entry posted
+  before its image is skipped until the image appears).
+- Add The Onion (WordPress API with photos) and Al Jazeera (RSS, with photos from
+  each story's page metadata, the same enrichment CNN uses).
+- Add a Screen times tab to Settings with a time for each kind of screen, saved on the
+  server and shared by every display; the markets screen defaults to one minute.
+- Add an S&P 500 market heatmap screen after the radar using TradingView's free
+  embeddable Stock Heatmap widget, grouped by sector and colored by daily change.
+- Add a photo-wall screen after the quote: every current story photo in three
+  rows drifting in alternating directions at standard, faster, and slower speeds.
+- Build each story batch from stories not yet shown this cycle, so newly published
+  stories appear in the next batch and shifting feeds no longer repeat stories.
+- Add local Philadelphia news from The Philadelphia Inquirer (News), Billy Penn,
+  and WHYY (Philadelphia), using section feeds that exclude wire filler and newscasts.
+- Turn the moon readout into a variable weather slot: NWS alerts, unhealthy air
+  quality, and high UV rotate with an upward slide; quiet days show the next sunrise,
+  sunset, or moonrise with a countdown, then the moon phase. Shorten its divider.
 - Follow observed radar with six hourly WeatherAPI.com precipitation forecast frames,
   switching the status label and color key while keeping the same base map and city layer.
 - Add a full-screen regional map with four animated RainViewer precipitation

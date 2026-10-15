@@ -3,9 +3,9 @@ import io
 import unittest
 from unittest.mock import Mock, patch
 
-from server import (Feed, add_temperatures, fetch, fetch_head, load_major_cities,
+from server import (Feed, Handler, SettingsStore, SCREEN_DURATIONS, load_pictures, parse_nasa_iotd, pick_nasa_archive, add_temperatures, fetch, fetch_head, load_major_cities,
                     location_url, nearby_temperature_url, normalize_postal_code,
-                    parse_location, parse_news, parse_quote, parse_radar, parse_weather,
+                    parse_alerts, parse_air_quality, parse_location, parse_news, parse_quote, parse_radar, parse_weather,
                     select_major_cities, weather_url)
 
 
@@ -109,6 +109,26 @@ class AdapterTests(unittest.TestCase):
         self.assertIn("forecast_days=5", url)
         self.assertIn("forecast_hours=12", url)
         self.assertIn("precipitation_probability", url)
+        self.assertIn("sunrise%2Csunset", url)
+        self.assertIn("uv_index", url)
+
+    def test_alerts_keep_actual_messages_ordered_by_severity(self):
+        def alert(event, severity, **extra):
+            return {"properties": {"event": event, "severity": severity, "status": "Actual",
+                                   "messageType": "Alert", "ends": "2026-10-15T20:00:00-04:00", **extra}}
+        raw = json.dumps({"features": [
+            alert("Air Quality Alert", "Moderate"), alert("Tornado Warning", "Extreme"),
+            alert("Tornado Warning", "Extreme"), alert("Heat Advisory", "Minor", status="Test"),
+            alert("Wind Advisory", "Minor", messageType="Cancel"),
+        ]})
+        alerts = parse_alerts(raw)
+        self.assertEqual([item["event"] for item in alerts], ["Tornado Warning", "Air Quality Alert"])
+        self.assertEqual(alerts[0]["ends"], "2026-10-15T20:00:00-04:00")
+
+    def test_air_quality_requires_numeric_index(self):
+        self.assertEqual(parse_air_quality(json.dumps({"current": {"us_aqi": 112.4, "pm2_5": 41}}))["us_aqi"], 112)
+        with self.assertRaises(ValueError):
+            parse_air_quality(json.dumps({"current": {"us_aqi": None}}))
 
     def test_weather_includes_complete_hourly_forecast(self):
         raw = {
@@ -162,6 +182,95 @@ class AdapterTests(unittest.TestCase):
         self.assertNotIn("Lancaster", names)
         self.assertTrue(all("Airport" not in name for name in names))
 
+
+
+class SettingsTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self.directory = tempfile.TemporaryDirectory()
+        self.store = SettingsStore(f"{self.directory.name}/settings.json")
+
+    def tearDown(self):
+        self.directory.cleanup()
+
+    def test_defaults_until_saved_then_persisted(self):
+        self.assertEqual(self.store.get()["screen_durations"]["markets"], 60)
+        self.store.save({"screen_durations": {"markets": 90}})
+        reloaded = SettingsStore(self.store.path).get()["screen_durations"]
+        self.assertEqual(reloaded["markets"], 90)
+        self.assertEqual(reloaded["gallery"], SCREEN_DURATIONS["gallery"])
+
+    def test_invalid_times_are_rejected(self):
+        for bad in ({"markets": 2}, {"markets": 4000}, {"markets": 30.5}, {"markets": "60"}, {"unknown": 30}, []):
+            with self.assertRaises(ValueError):
+                self.store.save({"screen_durations": bad})
+        self.assertFalse(self.store.path.exists())
+
+    def test_post_requires_json_and_saves(self):
+        def post(body, content_type="application/json"):
+            handler = Handler.__new__(Handler)
+            handler.path, handler.settings = "/api/settings", self.store
+            handler.headers = {"Content-Length": str(len(body)), "Content-Type": content_type}
+            handler.headers = type("Headers", (), {"get": handler.headers.get,
+                                                   "get_content_type": lambda _: content_type})()
+            handler.rfile = io.BytesIO(body)
+            sent = []
+            handler.send_json = lambda value, status=200: sent.append((status, value))
+            handler.do_POST()
+            return sent[0]
+        body = json.dumps({"screen_durations": {"weather": 45}}).encode()
+        self.assertEqual(post(body, "text/plain")[0], 400)
+        self.assertEqual(post(b"{nope")[0], 400)
+        status, value = post(body)
+        self.assertEqual((status, value["screen_durations"]["weather"]), (200, 45))
+        self.assertEqual(self.store.get()["screen_durations"]["weather"], 45)
+
+
+class NasaPictureTests(unittest.TestCase):
+    def test_image_of_the_day_uses_resized_newest_images(self):
+        items = "".join(f"""<item><title>Photo {i} &amp; more</title><link>https://www.nasa.gov/image-detail/{i}/</link>
+            <description>&lt;p&gt;What it shows {i}.&lt;/p&gt;</description><pubDate>Wed, 14 Oct 2026 15:19 GMT</pubDate>
+            <enclosure url="https://www.nasa.gov/wp-content/uploads/{i}orig.jpg" length="15430381" type="image/jpeg"/></item>""" for i in range(7))
+        photos = parse_nasa_iotd(f"<rss><channel>{items}</channel></rss>")
+        self.assertEqual(len(photos), 5)
+        self.assertEqual(photos[0]["url"], "https://www.nasa.gov/wp-content/uploads/0orig.jpg?w=2048")
+        self.assertEqual((photos[0]["title"], photos[0]["description"]), ("Photo 0 & more", "What it shows 0."))
+
+    def archive_fetcher(self, items):
+        def fetcher(url):
+            if "/asset/" in url:
+                nasa_id = url.rsplit("/", 1)[-1]
+                return json.dumps({"collection": {"items": [{"href": f"http://images-assets.nasa.gov/image/{nasa_id}/{nasa_id}~orig.tif"},
+                                                            {"href": f"http://images-assets.nasa.gov/image/{nasa_id}/{nasa_id}~large.jpg"}]}})
+            return json.dumps({"collection": {"metadata": {"total_hits": 50}, "items": [{"data": [item]} for item in items]}})
+        return fetcher
+
+    def test_archive_picks_are_striking_stable_per_day_and_https(self):
+        from datetime import date
+        good = [{"nasa_id": f"PIA{i}", "title": f"Spiral galaxy {i}",
+                 "description": "A sweeping view of stars and dust lanes across the disk. The image is online at http://hubblesite.org/x.",
+                 "center": "JPL", "date_created": "2017-12-08T00:00:00Z"} for i in range(10)]
+        dull = [{"nasa_id": "KSC-1", "title": "KSC-07PD-0342", "description": "x" * 200, "center": "KSC"},
+                {"nasa_id": "T1", "title": "Payload encapsulation", "description": "x" * 200, "center": "GSFC"},
+                {"nasa_id": "S1", "title": "Short", "description": "Too short", "center": "JPL"}]
+        fetcher = self.archive_fetcher(good + dull)
+        first = pick_nasa_archive(fetcher, date(2026, 10, 14))
+        self.assertEqual(len(first), 5)
+        self.assertTrue(all(photo["title"].startswith("Spiral galaxy") for photo in first))
+        self.assertTrue(all(photo["url"].startswith("https://") and photo["url"].endswith("~large.jpg") for photo in first))
+        self.assertEqual(first[0]["kicker"], "From the NASA archive · 2017")
+        self.assertEqual(first[0]["description"], "A sweeping view of stars and dust lanes across the disk.")
+        self.assertEqual(first, pick_nasa_archive(fetcher, date(2026, 10, 14)))
+
+    def test_either_half_can_fail(self):
+        def broken_archive(url):
+            if url.startswith("https://images-api"):
+                raise OSError("offline")
+            return ('<rss><channel><item><title>One</title><description>d</description>'
+                    '<enclosure url="https://www.nasa.gov/a.jpg" type="image/jpeg"/></item></channel></rss>')
+        self.assertEqual(len(load_pictures(broken_archive)["photos"]), 1)
+        with self.assertRaises(ValueError):
+            load_pictures(Mock(side_effect=OSError("offline")))
 
 if __name__ == "__main__":
     unittest.main()

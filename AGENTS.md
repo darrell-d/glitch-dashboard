@@ -9,9 +9,17 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   generative art. New screens should follow the extensible, full-screen direction
   documented in `VISION.md`.
 - Keep the experience full-viewport and readable at a distance.
-- Keep rotation timing and transition choice configurable.
-- Rotation: three individual story pages, weather, regional radar, quote, then the next batch.
-  No headline overview/list. `public/edition.js` fixes the batch during display.
+- Keep rotation timing and transition choice configurable. Per-screen-type times live on the
+  server (`/api/settings`, `data/settings.json`); other display options stay in the browser.
+- NASA pictures: five newest Images of the Day plus five daily random NASA Image Library picks
+  (`load_pictures`), three per batch in random non-adjacent gaps (`createEdition`). Do not
+  scrape Reuters, NYT, or Bloomberg pages (automated collection prohibited or blocked); the
+  Guardian's free API tier excludes current galleries.
+- Rotation: three individual story pages, weather, regional radar, an S&P 500 market heatmap
+  (TradingView's free embeddable widget, created once in `renderMarkets`), quote, a photo wall of
+  current story images (three uncropped rows drifting in alternating directions at standard, faster, and slower speeds), then the next batch.
+  No headline overview/list. `public/edition.js` fixes the batch during display;
+  each batch takes unshown stories first so new stories appear in the next batch.
 - Use requestAnimationFrame for smooth elapsed-time progress, preserving pause
   and resume. Keep upstream polling independent of that animation loop.
 - Newspaper pages use RSS headlines, images/captions/credits, and short
@@ -30,8 +38,11 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   Monochrome rotate weekly unless Settings pins one style. Monochrome uses an
   adjustable saved color and must remain legible on the dark green background.
   No provider/Outside labels on the screen; attribution stays in Settings.
-- Weather also shows a secondary locally calculated moon phase and illumination;
-  keep it visually subordinate to current temperature and conditions.
+- Weather has a secondary variable slot under the conditions, kept visually subordinate
+  to temperature and conditions. Active alerts (NWS, US AQI > 100, UV 6+) rotate with an
+  upward slide; otherwise it shows sunrise from 4:30 AM, sunset while the sun is up,
+  tonight's moonrise, then the locally calculated moon phase. Logic is in `public/signals.js`.
+  US pollen still lacks a provider.
 - Weather includes a compact next-12-hours strip with time, condition, Fahrenheit
   temperature, and precipitation probability; keep the current reading dominant.
 - Weather location is a browser-saved US ZIP code, defaulting to 19103. The server
@@ -48,10 +59,11 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   content as live data.
 - Keep upstream refresh intervals independent from panel rotation.
 - Confirmed defaults: ZIP 19103, Fahrenheit first with Celsius alongside,
-  NYT homepage headlines, and 30-second panel rotation.
+  NYT homepage headlines, and 30-second panels (markets 60, photo wall 300).
 - Keep source/category expansion easy; detailed news preferences are deferred.
 - `sources.py` configures NYT, CNN, Kotaku, WSJ, The Atlantic, POLITICO, WIRED,
-  Ars Technica, TechCrunch, and The New Yorker. Cap each source at four distinct
+  Ars Technica, TechCrunch, The New Yorker, and local Philadelphia Inquirer (News
+  section), Billy Penn, WHYY (Philadelphia section), The Onion, and Al Jazeera. Cap each source at four distinct
   stories and interleave publishers; label the actual publisher.
 - WSJ uses World News RSS and must be labeled accordingly. CNN uses current Lite
   links plus short public metadata; never use its stale legacy RSS. TechCrunch

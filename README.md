@@ -14,9 +14,12 @@ No third-party Python packages or frontend build required. Docker includes curl.
 make run
 ```
 
-Open **http://localhost:8080**. Settings (bottom right) controls screen duration,
-fade, slide, or instant transitions, and the weather icon style. Defaults: 30
-seconds, soft fade, a Meteocons style that changes each calendar week, and ZIP
+Open **http://localhost:8080**. Settings (bottom right) controls fade, slide, or
+instant transitions and the weather icon style; its **Screen times** tab sets how many
+seconds each kind of screen stays up. Screen times are saved on the server in
+`data/settings.json` (git-ignored; override the path with `DASHBOARD_SETTINGS`) and
+shared by every display, which picks up changes within a minute. Defaults: stories,
+weather, radar, and quote 30 seconds, markets 60, photo wall 300, pictures 20; soft fade, a Meteocons style that changes each calendar week, and ZIP
 code 19103. Changing the ZIP updates weather, clock timezone, and regional radar.
 Controls appear when hovering over or focusing the footer, and on small screens.
 
@@ -48,8 +51,12 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   Settings. The monochrome color is also configurable, with a light sage default
   chosen for the dark green display. The pinned SVG assets are served locally
   for display reliability.
-  A secondary lunar readout shows the current moon phase and illuminated
-  percentage using a local astronomical calculation.
+  A secondary slot beneath the conditions rotates through active alerts
+  (National Weather Service warnings such as heat, cold, fire, tornado, and
+  hurricane; US AQI above 100; UV index 6+), sliding each up in turn. With no
+  alerts it shows what is next in the sky: sunrise from 4:30 AM, sunset while the
+  sun is up, then tonight's moonrise, then the moon phase. Moonrise and phase use
+  a local astronomical calculation; sunrise and sunset come from Open-Meteo.
   Data and icon attribution is in Settings instead of on the weather screen.
 - **Regional radar:** A full-screen map centered on the selected ZIP, with four
   recent precipitation frames animated over OpenStreetMap and current temperatures
@@ -61,9 +68,9 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`, set in
   an editorial lockup with a vertical accent rule and the author below a fine rule.
 
-Each rotation shows **three individual story pages → weather → radar → quote**, then
+Each rotation shows **three individual story pages → weather → radar → markets → quote → photo wall**, then
 advances to the next batch of stories. There is no headline list. Every screen uses the
-configured duration (30 seconds by default). The edition's stories stay together
+screen time configured for its type in Settings. The edition's stories stay together
 while new feed data is held for the next batch, so a refresh does not replace
 an article midway through display. There are no navigation dots or visible section
 labels. Arrow keys step through individual pages.
@@ -75,6 +82,19 @@ pause, fullscreen, and settings. Keyboard arrows also work when a story button
 has focus. Static assets revalidate on refresh to pick up local changes.
 The countdown bar animates with display frames for smooth movement; pause and
 resume preserve elapsed time. Feed polling is independent of the animation.
+No numeric countdown is shown on any screen; a Ⅱ marks paused rotation.
+
+## NASA pictures
+
+Three NASA photos are shuffled into random gaps in each batch, never back to back, each
+shown uncropped with its title, description, and credit. The day's pool is the five newest
+[NASA Image of the Day](https://www.nasa.gov/feeds/iotd-feed/) entries (one new image
+each weekday, resized with `?w=2048` instead of the multi-megabyte originals) plus five
+random public-domain images from the [NASA Image and Video Library](https://images.nasa.gov/),
+picked once per day from astronomy and planetary topics with filters that skip catalog
+codes, ground operations, and thin descriptions. No API key is needed. Reuters and the
+Guardian were considered: Reuters prohibits automated collection, and the Guardian's free
+API tier excludes current photo galleries.
 
 ## News sources
 
@@ -90,13 +110,26 @@ resume preserve elapsed time. Feed polling is independent of the animation.
 | Ars Technica | Main RSS |
 | TechCrunch | Public WordPress API with excerpts and featured photos |
 | The New Yorker | Everything RSS |
+| The Philadelphia Inquirer | News section RSS (the main feed mixes in AP wire filler) |
+| Billy Penn | Main RSS |
+| WHYY | Philadelphia section RSS (the main feed includes newscasts and TV listings) |
+| The Onion | Public WordPress API with featured photos (newest four) |
+| Al Jazeera | All-news RSS; photos and missing details come from each story's public page metadata |
 
-"Top four" means the first four distinct stories in publisher feed/endpoint order,
+"Top four" means the first four distinct stories in publisher feed/endpoint order
+(preferring stories with photos when the feed has any),
 which may differ from homepage placement. The related-story filter runs before
 the four-story limit. Fewer are shown if there are insufficient distinct stories.
 Publishers are interleaved by rank: each first story, then each second story, up
-to 40 total. Cross-publisher coverage is retained to preserve four per source.
-Weather, radar, and quote remain between batches of three stories.
+to 60 total. Cross-publisher coverage is retained to preserve four per source.
+Weather, radar, an S&P 500 heatmap, quote, and a photo wall remain between batches of three stories.
+The heatmap is TradingView's free embeddable Stock Heatmap widget (sector groups, tiles
+sized by market value and colored by daily change); it loads its own data in the browser.
+The photo wall shows every current story photo in three uncropped rows drifting
+in alternating directions at standard, faster, and slower speeds; it is
+skipped when fewer than six stories have photos. Each batch
+takes the first three stories not yet shown this cycle, so a newly published
+story joins the next batch; once all have been shown, the cycle restarts.
 
 `sources.py` configures the endpoints. CNN's legacy RSS contains old 2023 stories
 and is not used. WSJ's automated homepage access is blocked, so World News is

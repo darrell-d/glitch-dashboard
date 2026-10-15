@@ -45,16 +45,21 @@
   function resolveStyle(preference = 'weekly', date = new Date()) {
     return STYLES.includes(preference) ? preference : styleForWeek(date);
   }
+  function namedUrl(name, style = 'fill') {
+    return `/meteocons/${resolveStyle(style)}/${name}.svg`;
+  }
   function iconUrl(code, isDay = true, style = 'fill') {
-    const resolved = resolveStyle(style);
-    return `/meteocons/${resolved}/${slug(code, isDay)}.svg`;
+    return namedUrl(slug(code, isDay), style);
   }
   function safeColor(value) {
     return /^#[0-9a-f]{6}$/i.test(value || '') ? value : '#dce7d6';
   }
   function icon(code, isDay = true, style = 'fill', monochromeColor = '#dce7d6') {
+    return named(slug(code, isDay), style, monochromeColor);
+  }
+  function named(name, style = 'fill', monochromeColor = '#dce7d6') {
     const resolved = resolveStyle(style);
-    const url = iconUrl(code, isDay, resolved);
+    const url = namedUrl(name, resolved);
     if (resolved === 'monochrome') {
       return `<span class="meteocon-inline" data-meteocon-src="${url}" aria-hidden="true" style="color:${safeColor(monochromeColor)};--meteocon-url:url('${url}')"></span>`;
     }
@@ -79,7 +84,7 @@
     }));
   }
   const api = { STYLES, appearance, slug, description, weekIndex, styleForWeek, resolveStyle,
-    iconUrl, safeColor, icon, hydrate };
+    iconUrl, namedUrl, safeColor, icon, named, hydrate };
   if (typeof module !== 'undefined') module.exports = api;
   else root.WeatherVisual = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

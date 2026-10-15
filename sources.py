@@ -20,6 +20,15 @@ SOURCES = [
     {"id": "ars", "name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index"},
     {"id": "techcrunch", "name": "TechCrunch", "format": "wordpress", "url": "https://techcrunch.com/wp-json/wp/v2/posts?per_page=12&_embed=wp:featuredmedia&_fields=id,link,title,excerpt,date_gmt,_embedded,_links"},
     {"id": "newyorker", "name": "The New Yorker", "url": "https://www.newyorker.com/feed/everything"},
+    # Local section feeds; the sites' main feeds mix in wire filler, newscasts, and TV listings.
+    {"id": "inquirer", "name": "The Philadelphia Inquirer", "selection": "News",
+     "url": "https://www.inquirer.com/arc/outboundfeeds/rss/category/news/?outputType=xml"},
+    {"id": "billypenn", "name": "Billy Penn", "url": "https://billypenn.com/feed/"},
+    {"id": "whyy", "name": "WHYY", "selection": "Philadelphia", "url": "https://whyy.org/secondary-categories/philadelphia/feed/"},
+    {"id": "onion", "name": "The Onion", "format": "wordpress",
+     "url": "https://theonion.com/wp-json/wp/v2/posts?per_page=12&_embed=wp:featuredmedia&_fields=id,link,title,excerpt,date_gmt,_embedded,_links"},
+    # Al Jazeera's RSS has no images; each selected story's public page metadata supplies its photo.
+    {"id": "aljazeera", "name": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "enrich": True},
 ]
 ATOM = "{http://www.w3.org/2005/Atom}"
 MEDIA = "{http://search.yahoo.com/mrss/}"
@@ -68,7 +77,10 @@ def preview_html(value):
 def finish(items, source):
     if not items:
         raise ValueError("No headlines in publisher response")
-    selected = select_stories(items)[:4]
+    stories = select_stories(items)
+    # When a feed has photos, skip its photo-less stories (e.g. NYT entries posted before their image).
+    with_photos = [item for item in stories if item.get("image_url")]
+    selected = (with_photos or stories)[:4]
     public = []
     for item in selected:
         public.append({
@@ -150,15 +162,19 @@ def parse_cnn(raw, source, fetch_head):
         parsed = urllib.parse.urlparse(url)
         if parsed.hostname == "www.cnn.com" and re.match(r"/\d{4}/\d{2}/\d{2}/", parsed.path) and link["title"]:
             items.append({"title": link["title"], "url": url})
-    selected = finish(items, source)
+    return enrich_metadata(finish(items, source), fetch_head)
+
+
+def enrich_metadata(selected, fetch_head):
+    """Fill missing photo/description/date/author from each selected story's public page metadata."""
 
     def enrich(item):
         try:
             metadata = preview_html(fetch_head(item["url"])).meta
-            item["description"] = plain_text(metadata.get("og:description") or metadata.get("description", ""))
-            item["image_url"] = https_url(metadata.get("og:image"))
-            item["published"] = metadata.get("article:published_time") or metadata.get("pubdate")
-            item["author"] = plain_text(metadata.get("author", ""))
+            item["description"] = item.get("description") or plain_text(metadata.get("og:description") or metadata.get("description", ""))
+            item["image_url"] = item.get("image_url") or https_url(metadata.get("og:image"))
+            item["published"] = item.get("published") or metadata.get("article:published_time") or metadata.get("pubdate")
+            item["author"] = item.get("author") or plain_text(metadata.get("author", ""))
         except Exception:
             # Current headlines remain useful if an article's metadata is unavailable.
             item["metadata_unavailable"] = True
@@ -175,4 +191,5 @@ def load_source(source, fetch, fetch_head):
         return parse_wordpress(raw, source)
     if source.get("format") == "cnn":
         return parse_cnn(raw, source, fetch_head)
-    return parse_news(raw, source)
+    selected = parse_news(raw, source)
+    return enrich_metadata(selected, fetch_head) if source.get("enrich") else selected
