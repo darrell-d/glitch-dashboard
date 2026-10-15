@@ -9,7 +9,7 @@ const GALLERY_MIN_PHOTOS = 6;
 const GALLERY_SECONDS_PER_PHOTO = 14;
 const GALLERY_ROW_SPEEDS = [1, 1.5, 0.65];
 const hasPhoto = (item) => typeof item.image_url === 'string' && item.image_url.startsWith('https://');
-let screens = DashboardEdition.createEdition([]);
+let screens = [{ panel: 'news', kind: 'article' }];
 const records = {};
 let config = { location: 'Local weather', region: '', postal_code: '19103', timezone: 'America/New_York' };
 let options = { transition: 'fade', postalCode: '19103', weatherIconStyle: 'weekly', weatherIconColor: '#dce7d6' };
@@ -19,6 +19,7 @@ let shownStories = new Set();
 let shownPictures = new Set();
 let shownMedia = new Set();
 let shownCartoons = new Set();
+let rotationState = { lastKind: '', newsGap: 0, weatherGap: 0 };
 let mediaToken = 0;
 let mediaFallbackTimer;
 let paused = false;
@@ -41,22 +42,38 @@ function validOptions(value) {
 // Seconds per kind of screen. The server keeps the shared values; this browser keeps a copy.
 const SCREEN_DURATIONS = { article: 30, weather: 120, radar: 120, markets: 60, quote: 30, gallery: 300, picture: 20 };
 const SCREEN_TYPES = Object.keys(SCREEN_DURATIONS);
+const ROTATION_TYPES = Object.keys(DashboardEdition.DEFAULT_WEIGHTS);
 function validDurations(value) {
   return Object.fromEntries(Object.entries(value || {}).filter(([screen, seconds]) =>
     SCREEN_TYPES.includes(screen) && Number.isInteger(seconds) && seconds >= 5 && seconds <= 3600));
 }
 let screenDurations = { ...SCREEN_DURATIONS, ...validDurations(readStored('glitch-screen-durations')) };
+function validRotation(value) {
+  if (!value || typeof value !== 'object' || !value.weights || typeof value.weights !== 'object') return null;
+  const weights = Object.fromEntries(ROTATION_TYPES.map((screen) => [screen, Number(value.weights[screen])]));
+  if (Object.values(weights).some((weight) => !Number.isInteger(weight) || weight < 0 || weight > 1000)
+      || !Object.values(weights).some((weight) => weight > 0)) return null;
+  const maxNewsGap = Number(value.max_news_gap);
+  const maxWeatherGap = Number(value.max_weather_gap);
+  if (![maxNewsGap, maxWeatherGap].every((gap) => Number.isInteger(gap) && gap >= 1 && gap <= 50)) return null;
+  return { weights, maxNewsGap, maxWeatherGap };
+}
+let rotationConfig = validRotation(readStored('glitch-rotation')) || {
+  weights: { ...DashboardEdition.DEFAULT_WEIGHTS }, ...DashboardEdition.DEFAULT_GUARDS };
 const screenSeconds = (panel) => screenDurations[panel === 'news' ? 'article' : panel] || SCREEN_DURATIONS.article;
 function applySettings(settings) {
   screenDurations = { ...SCREEN_DURATIONS, ...validDurations(settings?.screen_durations) };
+  rotationConfig = validRotation(settings?.rotation) || rotationConfig;
   store('glitch-screen-durations', screenDurations);
+  store('glitch-rotation', { weights: rotationConfig.weights, max_news_gap: rotationConfig.maxNewsGap,
+    max_weather_gap: rotationConfig.maxWeatherGap });
 }
 async function loadSettings() {
   try { applySettings(await request('/api/settings')); } catch { /* Keep this browser's last known times. */ }
 }
-async function saveSettings(durations) {
+async function saveSettings(durations, rotation) {
   const response = await fetch('/api/settings', { method: 'POST', cache: 'no-store',
-    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ screen_durations: durations }) });
+    headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ screen_durations: durations, rotation }) });
   if (!response.ok) throw new Error('Settings not saved');
   applySettings(await response.json());
 }
@@ -85,7 +102,7 @@ function renderNews(data) {
     const state = !source.available ? 'unavailable' : `${source.count} stories${source.stale ? ' · cached' : ''}`;
     return node('li', '', `${source.name}${source.selection ? ` · ${source.selection}` : ''}: ${state}`);
   }));
-  // Start directly with stories once available, then finish each fixed batch.
+  // Start a stable weighted edition once stories are available; refreshes wait for the next edition.
   if (screens.some((screen) => screen.panel === 'article')) return;
   nextEdition(data.items);
   current = 0;
@@ -585,28 +602,30 @@ async function refreshPictures() {
   } catch { /* Picture screens are optional; skip them until the feed is available. */ }
 }
 function nextEdition(items) {
-  const batch = DashboardEdition.pickStories(items, shownStories);
-  shownStories = batch.shown;
   const photos = items.filter(hasPhoto);
   const gallery = photos.length >= GALLERY_MIN_PHOTOS;
-  // Daily pictures and media are shuffled into non-adjacent gaps in each edition.
   const dayPictures = records.pictures?.data?.photos || [];
-  const pictureBatch = DashboardEdition.pickStories(DashboardEdition.shuffle(dayPictures), shownPictures,
-    Math.min(DashboardEdition.PICTURES_PER_BATCH, dayPictures.length));
+  const dayMedia = records.pictures?.data?.videos || [];
+  const cartoons = records.pictures?.data?.cartoons || [];
+  const plan = DashboardEdition.createSchedule({ weights: rotationConfig.weights,
+    maxNewsGap: rotationConfig.maxNewsGap, maxWeatherGap: rotationConfig.maxWeatherGap,
+    state: rotationState, availability: { article: items.length > 0, gallery,
+      picture: dayPictures.length > 0, cartoon: cartoons.length > 0, media: dayMedia.length > 0 } });
+  rotationState = plan.state;
+  const count = (kind) => plan.kinds.filter((item) => item === kind).length;
+  const batch = DashboardEdition.pickCycle(items, shownStories, count('article'));
+  shownStories = batch.shown;
+  const pictureBatch = DashboardEdition.pickCycle(DashboardEdition.shuffle(dayPictures), shownPictures, count('picture'));
   shownPictures = pictureBatch.shown;
   pictureBatch.items.forEach((photo) => { const preload = new Image(); preload.src = photo.url; });
-  const dayMedia = records.pictures?.data?.videos || [];
-  const mediaBatch = DashboardEdition.pickStories(DashboardEdition.shuffle(dayMedia), shownMedia,
-    Math.min(DashboardEdition.MEDIA_PER_BATCH, dayMedia.length));
+  const mediaBatch = DashboardEdition.pickCycle(DashboardEdition.shuffle(dayMedia), shownMedia, count('media'));
   shownMedia = mediaBatch.shown;
   mediaBatch.items.forEach((item) => { if (item.poster) { const preload = new Image(); preload.src = item.poster; } });
-  const cartoons = records.pictures?.data?.cartoons || [];
-  const cartoonBatch = DashboardEdition.pickStories(DashboardEdition.shuffle(cartoons), shownCartoons,
-    Math.min(DashboardEdition.CARTOONS_PER_BATCH, cartoons.length));
+  const cartoonBatch = DashboardEdition.pickCycle(DashboardEdition.shuffle(cartoons), shownCartoons, count('cartoon'));
   shownCartoons = cartoonBatch.shown;
   cartoonBatch.items.forEach((cartoon) => { const preload = new Image(); preload.src = cartoon.url; });
-  screens = DashboardEdition.createEdition(batch.items, { gallery, pictures: pictureBatch.items,
-    media: mediaBatch.items, cartoons: cartoonBatch.items });
+  screens = DashboardEdition.createEdition(batch.items, { schedule: plan.kinds,
+    pictures: pictureBatch.items, media: mediaBatch.items, cartoons: cartoonBatch.items });
   // Build the photo wall with the batch so its images load well before it appears.
   if (gallery) renderGallery(photos);
 }
@@ -727,6 +746,9 @@ $('settings').addEventListener('click', () => {
   wasPaused = paused;
   setPaused(true);
   SCREEN_TYPES.forEach((screen) => { $(`time-${screen}`).value = screenDurations[screen]; });
+  ROTATION_TYPES.forEach((screen) => { $(`weight-${screen}`).value = rotationConfig.weights[screen]; });
+  $('max-news-gap').value = rotationConfig.maxNewsGap;
+  $('max-weather-gap').value = rotationConfig.maxWeatherGap;
   showSettingsTab('display');
   $('transition').value = options.transition;
   $('postal-code').value = options.postalCode;
@@ -736,7 +758,7 @@ $('settings').addEventListener('click', () => {
   $('settings-dialog').showModal();
 });
 function showSettingsTab(name) {
-  for (const tab of ['display', 'times']) {
+  for (const tab of ['display', 'times', 'rotation']) {
     const selected = tab === name;
     $(`settings-tab-${tab}`).setAttribute('aria-selected', String(selected));
     $(`settings-tab-${tab}`).tabIndex = selected ? 0 : -1;
@@ -745,16 +767,20 @@ function showSettingsTab(name) {
 }
 $('settings-tab-display').addEventListener('click', () => showSettingsTab('display'));
 $('settings-tab-times').addEventListener('click', () => showSettingsTab('times'));
+$('settings-tab-rotation').addEventListener('click', () => showSettingsTab('rotation'));
 $('settings-dialog').addEventListener('close', async () => {
   if ($('settings-dialog').returnValue === 'save') {
     const durations = Object.fromEntries(SCREEN_TYPES.map((screen) => [screen, Number($(`time-${screen}`).value)]));
-    if (Object.keys(validDurations(durations)).length === SCREEN_TYPES.length) {
+    const rotation = { weights: Object.fromEntries(ROTATION_TYPES.map((screen) =>
+      [screen, Number($(`weight-${screen}`).value)])), max_news_gap: Number($('max-news-gap').value),
+      max_weather_gap: Number($('max-weather-gap').value) };
+    if (Object.keys(validDurations(durations)).length === SCREEN_TYPES.length && validRotation(rotation)) {
       try {
-        await saveSettings(durations);
+        await saveSettings(durations, rotation);
         $('screen-times-status').textContent = '';
       } catch {
-        applySettings({ screen_durations: durations });
-        $('screen-times-status').textContent = 'The server could not save these times; they apply on this browser only.';
+        applySettings({ screen_durations: durations, rotation });
+        $('screen-times-status').textContent = 'The server could not save these settings; they apply on this browser only.';
       }
       resetTimer();
     }
@@ -835,6 +861,7 @@ function renderMarkets() {
 async function init() {
   try { config = await request(`/api/config?${locationQuery()}`); } catch { /* Keep known initial defaults. */ }
   updateClock();
+  await loadSettings();
   for (const name of names) {
     const cached = readStored(name === 'news' ? 'glitch-feed-news-v2' : `glitch-feed-${name}`);
     // Weather cache belongs to a specific location/configuration.
@@ -848,7 +875,7 @@ async function init() {
     refresh(name);
   }
   renderMarkets();
-  await Promise.all([loadSettings(), refreshPictures()]);
+  await refreshPictures();
   resetTimer();
   setInterval(() => { refresh('news'); refresh('weather'); refresh('radar'); loadSettings(); refreshPictures(); }, 60000);
   setInterval(() => refresh('quote'), 90000);

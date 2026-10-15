@@ -36,6 +36,9 @@ SETTINGS_PATH = Path(os.environ.get("DASHBOARD_SETTINGS", ROOT / "data" / "setti
 # Seconds each kind of screen stays up; editable from Settings and shared by every display.
 SCREEN_DURATIONS = {"article": 30, "weather": 120, "radar": 120, "markets": 60, "quote": 30, "gallery": 300, "picture": 20}
 DURATION_LIMITS = (5, 3600)
+ROTATION_WEIGHTS = {"article": 50, "weather": 20, "radar": 10, "markets": 4, "quote": 4,
+                    "gallery": 4, "picture": 3, "cartoon": 3, "media": 2}
+ROTATION_GUARDS = {"max_news_gap": 3, "max_weather_gap": 6}
 NASA_IOTD_URL = "https://www.nasa.gov/feeds/iotd-feed/"
 NASA_IMAGES_URL = "https://images-api.nasa.gov"
 WIKIMEDIA_POTD_URL = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=atom&language=en"
@@ -687,6 +690,30 @@ def parse_screen_durations(value):
     return durations
 
 
+def parse_rotation(value):
+    if value is None:
+        value = {}
+    if not isinstance(value, dict) or set(value) - {"weights", *ROTATION_GUARDS}:
+        raise ValueError("Unknown rotation setting")
+    supplied = value.get("weights", {})
+    if not isinstance(supplied, dict) or set(supplied) - set(ROTATION_WEIGHTS):
+        raise ValueError("Unknown rotation weight")
+    weights = dict(ROTATION_WEIGHTS)
+    for screen, weight in supplied.items():
+        if not isinstance(weight, int) or isinstance(weight, bool) or not 0 <= weight <= 1000:
+            raise ValueError("Rotation weights must be 0-1000 whole numbers")
+        weights[screen] = weight
+    if not sum(weights.values()):
+        raise ValueError("At least one rotation weight must be positive")
+    rotation = {"weights": weights}
+    for name, default in ROTATION_GUARDS.items():
+        gap = value.get(name, default)
+        if not isinstance(gap, int) or isinstance(gap, bool) or not 1 <= gap <= 50:
+            raise ValueError("Rotation gaps must be 1-50 whole screens")
+        rotation[name] = gap
+    return rotation
+
+
 class SettingsStore:
     """Dashboard-wide settings persisted as a small JSON file next to the server."""
 
@@ -697,12 +724,14 @@ class SettingsStore:
         with self.lock:
             try:
                 saved = json.loads(self.path.read_text())
-                return {"screen_durations": parse_screen_durations(saved.get("screen_durations", {}))}
+                return {"screen_durations": parse_screen_durations(saved.get("screen_durations", {})),
+                        "rotation": parse_rotation(saved.get("rotation"))}
             except (OSError, ValueError, AttributeError):
-                return {"screen_durations": dict(SCREEN_DURATIONS)}
+                return {"screen_durations": dict(SCREEN_DURATIONS), "rotation": parse_rotation(None)}
 
     def save(self, value):
-        settings = {"screen_durations": parse_screen_durations((value or {}).get("screen_durations"))}
+        settings = {"screen_durations": parse_screen_durations((value or {}).get("screen_durations")),
+                    "rotation": parse_rotation((value or {}).get("rotation"))}
         with self.lock:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             temporary = self.path.with_suffix(".tmp")

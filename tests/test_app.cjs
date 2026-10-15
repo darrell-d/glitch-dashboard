@@ -9,6 +9,13 @@ const MoonPhase = require('../public/moon.js');
 const WeatherSignals = require('../public/signals.js');
 const RadarMap = require('../public/radar.js');
 
+const rotationSettings = (weights = {}, screenDurations = {}) => ({
+  screen_durations: { article: 30, weather: 120, radar: 120, markets: 60, quote: 30, gallery: 300, picture: 20,
+    ...screenDurations },
+  rotation: { weights: { article: 50, weather: 20, radar: 10, markets: 4, quote: 4, gallery: 4,
+    picture: 3, cartoon: 3, media: 2, ...weights }, max_news_gap: 3, max_weather_gap: 6 },
+});
+
 // Exercise the actual app's navigation/timer with a minimal DOM, without a browser.
 class Element {
   constructor(tagName = 'DIV') {
@@ -43,6 +50,7 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
   const stored = {};
   const markup = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
   const elements = Object.fromEntries([...markup.matchAll(/id="([^"]+)"/g)].map((match) => [match[1], new Element()]));
+  elements['quote-text'].parentElement = new Element();
   const extras = { '.footer': new Element(), '.paper-story': new Element() };
   const listeners = {};
   const location = { hash };
@@ -88,26 +96,29 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
     finishTransitions: () => transitionTimers.splice(0).forEach((callback) => callback()) };
 }
 
-test('stories appear immediately and automatic rotation advances to the next story', async () => {
-  const screen = await app();
+test('stories appear immediately and automatic rotation advances to the next scheduled screen', async () => {
+  const screen = await app('', { settings: rotationSettings({ article: 1, weather: 0, radar: 0, markets: 0,
+    quote: 0, gallery: 0, picture: 0, cartoon: 0, media: 0 }) });
   assert.equal(screen.elements['article-title'].textContent, 'Story 0');
+  const nextPanel = screen.run('screens[1].panel');
   screen.advance(31000);
-  assert.equal(screen.elements.article.classList.contains('active'), true);
-  assert.equal(screen.elements['article-title'].textContent, 'Story 1');
-  assert.equal(screen.extras['.footer'].inert, true);
-  assert.equal(screen.location.hash, '#article');
+  assert.equal(screen.run('current'), 1);
+  assert.equal(screen.elements[nextPanel].classList.contains('active'), true);
+  assert.equal(screen.location.hash, `#${nextPanel}`);
 });
 
 test('the photo wall stays up five minutes by default', async () => {
-  const screen = await app('', { storyCount: 6 });
+  const screen = await app('', { storyCount: 6, settings: rotationSettings({ article: 0, weather: 0, radar: 0,
+    markets: 0, quote: 0, gallery: 1, picture: 0, cartoon: 0, media: 0 }) });
   screen.run("showPanel(screens.findIndex((item) => item.panel === 'gallery'))");
+  const start = screen.run('current');
   assert.equal(screen.elements.gallery.classList.contains('active'), true);
   screen.advance(299000);
   assert.equal(screen.elements.gallery.classList.contains('active'), true);
   assert.equal(screen.elements.countdown.textContent, '');
   screen.advance(2000);
-  assert.equal(screen.elements.gallery.classList.contains('active'), false);
-  assert.equal(screen.elements.article.classList.contains('active'), true);
+  assert.notEqual(screen.run('current'), start);
+  assert.equal(screen.elements.gallery.classList.contains('active'), true);
 });
 
 test('weather and radar each stay up two minutes by default', async () => {
@@ -122,7 +133,8 @@ test('weather and radar each stay up two minutes by default', async () => {
 });
 
 test('screen times come from the server and are saved from the settings tab', async () => {
-  const screen = await app('', { settings: { screen_durations: { article: 10, weather: 30, radar: 30, markets: 60, quote: 30, gallery: 300 } } });
+  const screen = await app('', { settings: rotationSettings({ article: 1, weather: 0, radar: 0, markets: 0,
+    quote: 0, gallery: 0, picture: 0, cartoon: 0, media: 0 }, { article: 10, weather: 30, radar: 30 }) });
   assert.equal(screen.elements.article.classList.contains('active'), true);
   screen.advance(11000);
   assert.equal(screen.elements['article-title'].textContent, 'Story 1');
@@ -133,23 +145,31 @@ test('screen times come from the server and are saved from the settings tab', as
   assert.equal(screen.elements['settings-panel-times'].hidden, false);
   assert.equal(screen.elements['settings-tab-times'].attributes['aria-selected'], 'true');
   screen.elements['time-article'].value = '45';
+  screen.elements['settings-tab-rotation'].click();
+  assert.equal(screen.elements['settings-panel-rotation'].hidden, false);
+  screen.elements['weight-article'].value = '60';
+  screen.elements['max-news-gap'].value = '4';
   screen.elements['settings-dialog'].returnValue = 'save';
   await screen.elements['settings-dialog'].listeners.close();
   assert.equal(screen.posts.length, 1);
   assert.equal(screen.posts[0].screen_durations.article, 45);
+  assert.equal(screen.posts[0].rotation.weights.article, 60);
+  assert.equal(screen.posts[0].rotation.max_news_gap, 4);
   screen.advance(40000);
   assert.equal(screen.elements['article-title'].textContent, 'Story 1');
   screen.advance(6000);
   assert.equal(screen.elements['article-title'].textContent, 'Story 2');
 });
 
-test('NASA pictures appear in the next batch with title, description, and credit', async () => {
+test('NASA pictures follow their configured weight with title, description, and credit', async () => {
   const pictures = [1, 2, 3, 4].map((i) => ({ url: `https://images-assets.nasa.gov/p${i}~large.jpg`, kicker: 'NASA Image of the Day',
     title: `Title ${i}`, description: `Description ${i}`, credit: `Photographer ${i}` }));
-  const screen = await app('', { pictures });
+  const screen = await app('', { pictures, settings: rotationSettings({ article: 0, weather: 0, radar: 0, markets: 0,
+    quote: 0, gallery: 0, picture: 1, cartoon: 0, media: 0 }) });
   screen.run('showPanel(screens.length)');
   const shown = screen.run("screens.filter((item) => item.panel === 'picture').map((item) => item.item.url)");
-  assert.equal(shown.length, 3);
+  assert.equal(shown.length, 20);
+  assert.equal(new Set(shown.slice(0, 4)).size, 4);
   screen.run("showPanel(screens.findIndex((item) => item.panel === 'picture'))");
   assert.equal(screen.elements.picture.classList.contains('active'), true);
   assert.equal(screen.elements['picture-kicker'].textContent, 'NASA Image of the Day');
@@ -158,14 +178,16 @@ test('NASA pictures appear in the next batch with title, description, and credit
   assert.equal(screen.elements['picture-image'].src, screen.run("screens[current].item.url"));
 });
 
-test('one political cartoon is mixed into each edition as a full-screen picture', async () => {
+test('political cartoons participate by weight as full-screen pictures', async () => {
   const cartoons = [1, 2].map((i) => ({ url: `https://i.guim.co.uk/cartoon-${i}.jpg`,
     kicker: 'Political cartoon · This week', title: `Cartoon ${i}`,
     description: `Description ${i}`, credit: `Artist ${i} · The Guardian` }));
-  const screen = await app('', { cartoons });
+  const screen = await app('', { cartoons, settings: rotationSettings({ article: 0, weather: 0, radar: 0, markets: 0,
+    quote: 0, gallery: 0, picture: 0, cartoon: 1, media: 0 }) });
   screen.run('showPanel(screens.length)');
   const shown = screen.run("screens.filter((item) => item.item?.kicker?.startsWith('Political cartoon')).map((item) => item.item.url)");
-  assert.equal(shown.length, 1);
+  assert.equal(shown.length, 20);
+  assert.equal(new Set(shown.slice(0, 2)).size, 2);
   screen.run("showPanel(screens.findIndex((item) => item.item?.kicker?.startsWith('Political cartoon')))");
   assert.match(screen.elements['picture-caption'].textContent, /^Cartoon [12]$/);
   assert.match(screen.elements['picture-credit'].textContent, /^Image: Artist [12] · The Guardian$/);
@@ -175,7 +197,8 @@ test('featured video owns rotation until playback ends', async () => {
   const media = [{ url: 'https://upload.wikimedia.org/video.webm', type: 'video/webm',
     poster: 'https://thumb.wikimedia.org/poster.jpg', kicker: 'Wikimedia media of the day',
     title: 'A featured film', credit: 'Wikimedia Commons contributors' }];
-  const screen = await app('', { media });
+  const screen = await app('', { media, settings: rotationSettings({ article: 0, weather: 0, radar: 0, markets: 0,
+    quote: 0, gallery: 0, picture: 0, cartoon: 0, media: 1 }) });
   screen.run('showPanel(screens.length)');
   screen.run("showPanel(screens.findIndex((item) => item.panel === 'media'))");
   assert.equal(screen.elements.media.classList.contains('active'), true);
@@ -188,8 +211,9 @@ test('featured video owns rotation until playback ends', async () => {
   assert.equal(screen.elements['media-progress'].attributes['aria-valuenow'], '90');
   screen.advance(600000);
   assert.equal(screen.elements.media.classList.contains('active'), true);
+  const mediaIndex = screen.run('current');
   screen.elements['media-video'].onended();
-  assert.equal(screen.elements.media.classList.contains('active'), false);
+  assert.notEqual(screen.run('current'), mediaIndex);
 });
 
 test('M toggles video sound and is remembered', async () => {
@@ -212,7 +236,11 @@ test('direct story URL opens a photo page once feed data is available', async ()
   assert.equal(screen.elements['article-excerpt'].textContent, 'Description 0');
   assert.equal(screen.elements['article-source'].textContent, 'CNN');
   assert.match(screen.elements['article-status'].textContent, /^Cached/);
+  const startingIndex = screen.run('current');
   screen.elements['paper-next'].click();
+  assert.equal(screen.run('current'), (startingIndex + 1) % screen.run('screens.length'));
+  const nextArticle = screen.run("screens.findIndex((item) => item.item?.url === 'https://example.com/1')");
+  screen.run(`showPanel(${nextArticle})`);
   assert.equal(screen.elements['article-source'].textContent, 'WIRED');
   assert.doesNotMatch(screen.elements['article-status'].textContent, /^Cached/);
 });
@@ -316,18 +344,19 @@ test('display markup has no app header, story count, article link, or quote coll
   assert.doesNotMatch(weather, /Open-Meteo/);
 });
 
-test('story controls reach weather and return to stories without a headline list', async () => {
+test('story controls follow the weighted schedule and navigate backward without a headline list', async () => {
   const screen = await app();
+  const secondPanel = screen.run('screens[1].panel');
   screen.elements['paper-next'].click();
-  assert.equal(screen.elements['article-title'].textContent, 'Story 1');
-  screen.elements['paper-next'].click();
-  assert.equal(screen.elements['article-title'].textContent, 'Story 2');
-  screen.elements['paper-next'].click();
+  assert.equal(screen.elements[secondPanel].classList.contains('active'), true);
+  const weatherIndex = screen.run("screens.findIndex((item) => item.panel === 'weather')");
+  assert.ok(weatherIndex >= 0);
+  screen.run(`showPanel(${weatherIndex})`);
   assert.equal(screen.elements.weather.classList.contains('active'), true);
   assert.equal(screen.extras['.footer'].inert, false);
+  const previousPanel = screen.run(`screens[(${weatherIndex} - 1 + screens.length) % screens.length].panel`);
   screen.listeners.keydown({ key: 'ArrowLeft', target: { tagName: 'BODY' }, preventDefault() {} });
-  assert.equal(screen.elements.article.classList.contains('active'), true);
-  assert.equal(screen.elements['article-title'].textContent, 'Story 2');
+  assert.equal(screen.elements[previousPanel].classList.contains('active'), true);
 });
 
 test('radar screen is centered on the configured ZIP and has live map layers', async () => {
@@ -367,8 +396,11 @@ test('progress advances on animation frames between seconds, freezes on pause, a
 
 test('keyboard arrows work after focusing story buttons and an image failure keeps the story visible', async () => {
   const screen = await app('#article');
+  const startingIndex = screen.run('current');
   screen.listeners.keydown({ key: 'ArrowRight', target: { tagName: 'BUTTON' }, preventDefault() {} });
-  assert.equal(screen.elements['article-title'].textContent, 'Story 1');
+  assert.equal(screen.run('current'), (startingIndex + 1) % screen.run('screens.length'));
+  const nextArticle = screen.run("screens.findIndex((item, index) => index > 0 && item.panel === 'article')");
+  screen.run(`showPanel(${nextArticle})`);
   screen.elements['article-image'].onerror();
   assert.equal(screen.elements.article.classList.contains('paper-no-image'), true);
   assert.equal(screen.elements.article.classList.contains('active'), true);

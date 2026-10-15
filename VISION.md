@@ -115,13 +115,15 @@ screen module when tighter lifecycle or performance control is worthwhile.
 
 ## Planned Direction
 
-1. Refactor the current fixed panel sequence into a screen registry with explicit
-   lifecycle hooks and per-screen timing.
+1. Evolve the weighted random scheduler into a screen registry with explicit lifecycle
+   hooks. Per-screen timing, weights, recurrence limits, and non-repeating content pools
+   are complete.
 2. Audit LawnMower and expose it as an autonomous, full-screen dashboard screen.
 3. Add the first native generative-art screen, likely a high-resolution Mandelbrot
    renderer.
 4. Add more mathematical and procedural screens behind the same interface.
-5. Add weather-event data after selecting its visual treatment and providers.
+5. Add a US pollen provider to the existing weather-event ticker; NWS alerts, air quality,
+   UV, sky events, wind, and moon details are complete.
 6. Add a full-screen regional radar screen centered on the browser-configured ZIP,
    with a time legend and nearby reporting-area temperature labels. (Complete.)
 7. Harden startup, recovery, caching, and diagnostics for unattended use.

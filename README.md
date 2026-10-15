@@ -76,10 +76,15 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   Video is shown full-screen over a blurred poster fill, autoplayed muted for kiosk
   reliability, and advances to the next screen when playback ends.
 
-Each rotation keeps **three individual story pages → weather → radar → markets → quote → photo wall**
-as its core sequence, with daily pictures and one featured video shuffled into separate gaps, then
-advances to the next batch of stories. There is no headline list. Every screen uses the
-screen time configured for its type in Settings. The edition's stories stay together
+Each 20-screen edition is built with weighted random selection. Defaults give news 50%,
+current weather 20%, radar 10%, and divide the remaining 20% among markets, quotes,
+the photo wall, daily pictures, current political cartoons, and featured video. Weather
+and radar share one recurrence group; by default no more than three other screens can
+separate news and no more than six can separate either kind of weather. Consecutive
+screens avoid the same screen type when another enabled choice is available. Weights
+and both maximum gaps are editable in Settings, and videos participate by weight while
+still controlling rotation through the end of playback. There is no headline list. Every screen uses the
+screen time configured for its type in Settings. An edition's selections stay together
 while new feed data is held for the next batch, so a refresh does not replace
 an article midway through display. There are no navigation dots or visible section
 labels. Arrow keys step through individual pages.
@@ -95,20 +100,20 @@ No numeric countdown is shown on any screen; a Ⅱ marks paused rotation.
 
 ## Daily pictures and media
 
-Three photos are shuffled into random gaps in each batch, never back to back, each
-shown uncropped with its title, description, and credit. The day's pool is the five newest
+Daily photos, cartoons, and videos are mixed according to their configured weights. Each is shown uncropped
+with its title, description, and credit. The day's pool is the five newest
 [NASA Image of the Day](https://www.nasa.gov/feeds/iotd-feed/) entries (one new image
 each weekday, resized with `?w=2048` instead of the multi-megabyte originals) plus five
 random public-domain images from the [NASA Image and Video Library](https://images.nasa.gov/),
 picked once per day from astronomy and planetary topics with filters that skip catalog
 codes, ground operations, and thin descriptions, plus five official
 [Wikimedia Commons pictures of the day](https://commons.wikimedia.org/wiki/Commons:Picture_of_the_day).
-One current political cartoon from [The Guardian's cartoons feed](https://www.theguardian.com/tone/cartoons)
-appears per edition using the same full-screen blurred-backdrop treatment. Only politics and world-news
+Current political cartoons from [The Guardian's cartoons feed](https://www.theguardian.com/tone/cartoons)
+use the same full-screen blurred-backdrop treatment. Only politics and world-news
 cartoons from the previous seven days qualify; their official pages provide the highest-resolution
 uncropped image available.
 The official Commons media-of-the-day feed supplies direct video transcodes and posters;
-one video appears per edition, controls its own duration, and shows a shrinking remaining-time bar. No API key is needed. Reuters and the
+videos control their own duration and show a shrinking remaining-time bar. No API key is needed. Reuters and the
 Guardian were considered: Reuters prohibits automated collection, and the Guardian's free
 API tier excludes current photo galleries.
 

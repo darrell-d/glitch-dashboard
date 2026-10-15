@@ -4,7 +4,7 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
-from server import (Feed, Handler, SettingsStore, SCREEN_DURATIONS, load_pictures, parse_guardian_cartoons, parse_nasa_iotd, parse_wikimedia_motd, parse_wikimedia_potd, pick_nasa_archive, add_temperatures, fetch, fetch_head, load_major_cities,
+from server import (Feed, Handler, SettingsStore, SCREEN_DURATIONS, load_pictures, parse_guardian_cartoons, parse_nasa_iotd, parse_rotation, parse_wikimedia_motd, parse_wikimedia_potd, pick_nasa_archive, add_temperatures, fetch, fetch_head, load_major_cities,
                     location_url, nearby_temperature_url, normalize_postal_code,
                     parse_alerts, parse_air_quality, parse_location, parse_news, parse_quote, parse_radar, parse_weather,
                     select_major_cities, weather_url)
@@ -198,10 +198,22 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(self.store.get()["screen_durations"]["markets"], 60)
         self.assertEqual(self.store.get()["screen_durations"]["weather"], 120)
         self.assertEqual(self.store.get()["screen_durations"]["radar"], 120)
+        self.assertEqual(self.store.get()["rotation"]["weights"]["article"], 50)
+        self.assertEqual(self.store.get()["rotation"]["max_weather_gap"], 6)
         self.store.save({"screen_durations": {"markets": 90}})
         reloaded = SettingsStore(self.store.path).get()["screen_durations"]
         self.assertEqual(reloaded["markets"], 90)
         self.assertEqual(reloaded["gallery"], SCREEN_DURATIONS["gallery"])
+
+    def test_rotation_settings_validate_weights_and_guards(self):
+        rotation = parse_rotation({"weights": {"article": 60, "gallery": 0},
+                                   "max_news_gap": 4, "max_weather_gap": 8})
+        self.assertEqual((rotation["weights"]["article"], rotation["weights"]["gallery"]), (60, 0))
+        self.assertEqual((rotation["max_news_gap"], rotation["max_weather_gap"]), (4, 8))
+        for bad in ({"weights": {"unknown": 1}}, {"weights": {"article": -1}},
+                    {"weights": {key: 0 for key in rotation["weights"]}}, {"max_news_gap": 0}):
+            with self.assertRaises(ValueError):
+                parse_rotation(bad)
 
     def test_invalid_times_are_rejected(self):
         for bad in ({"markets": 2}, {"markets": 4000}, {"markets": 30.5}, {"markets": "60"}, {"unknown": 30}, []):
@@ -227,6 +239,7 @@ class SettingsTests(unittest.TestCase):
         status, value = post(body)
         self.assertEqual((status, value["screen_durations"]["weather"]), (200, 45))
         self.assertEqual(self.store.get()["screen_durations"]["weather"], 45)
+        self.assertEqual(value["rotation"]["weights"]["article"], 50)
 
 
 class NasaPictureTests(unittest.TestCase):

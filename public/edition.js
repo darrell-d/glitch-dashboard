@@ -1,25 +1,11 @@
-/* A fixed batch prevents feed refresh from replacing a story during display. */
+/* Weighted, guarded rotation planning and content-pool cycling. */
 (function (root) {
   'use strict';
-  const BATCH_SIZE = 3;
-  const PICTURES_PER_BATCH = 3;
-  const MEDIA_PER_BATCH = 1;
-  const CARTOONS_PER_BATCH = 1;
 
-  // Next stories to show: unshown stories in feed order, so a new story at the top of
-  // a feed joins the very next batch. Once everything has been shown, the cycle restarts.
-  function pickStories(items, shown = new Set(), size = BATCH_SIZE) {
-    const unique = items.filter((item, i) => items.findIndex((other) => other.url === item.url) === i);
-    const current = new Set(unique.map((item) => item.url));
-    let next = new Set([...shown].filter((url) => current.has(url)));
-    let picked = unique.filter((item) => !next.has(item.url)).slice(0, size);
-    if (picked.length < size) {
-      next = new Set();
-      picked = [...picked, ...unique.filter((item) => !picked.includes(item)).slice(0, size - picked.length)];
-    }
-    picked.forEach((item) => next.add(item.url));
-    return { items: picked.map((item) => ({ ...item })), shown: next };
-  }
+  const ROTATION_SIZE = 20;
+  const DEFAULT_WEIGHTS = { article: 50, weather: 20, radar: 10, markets: 4, quote: 4,
+    gallery: 4, picture: 3, cartoon: 3, media: 2 };
+  const DEFAULT_GUARDS = { maxNewsGap: 3, maxWeatherGap: 6 };
 
   function shuffle(items, random = Math.random) {
     const copy = [...items];
@@ -30,22 +16,94 @@
     return copy;
   }
 
-  function createEdition(stories, { gallery = false, pictures = [], media = [], cartoons = [], random = Math.random } = {}) {
-    const selected = stories.slice(0, BATCH_SIZE).map((item) => ({ ...item }));
-    const screens = [...(selected.length ? selected.map((item, index) => ({ panel: 'article', item, index, count: selected.length })) : [{ panel: 'news' }]),
-      { panel: 'weather' }, { panel: 'radar' }, { panel: 'markets' }, { panel: 'quote' }, ...(gallery ? [{ panel: 'gallery' }] : [])];
-    // Each picture takes its own random gap after a regular screen, so two never run back to back
-    // and a batch never opens with one (the previous batch may have just ended with a picture).
-    const extras = shuffle([
-      ...pictures.map((item) => ({ panel: 'picture', item: { ...item } })),
-      ...media.map((item) => ({ panel: 'media', item: { ...item } })),
-      ...cartoons.map((item) => ({ panel: 'picture', item: { ...item } })),
-    ], random);
-    const gaps = shuffle(screens.map((_, i) => i + 1), random).slice(0, extras.length).sort((a, b) => b - a);
-    gaps.forEach((gap, i) => screens.splice(gap, 0, extras[i]));
-    return screens;
+  function unique(items) {
+    return items.filter((item, i) => items.findIndex((other) => other.url === item.url) === i);
   }
-  const api = { BATCH_SIZE, PICTURES_PER_BATCH, MEDIA_PER_BATCH, CARTOONS_PER_BATCH, pickStories, shuffle, createEdition };
+
+  // Pull from a changing feed without repeating until its currently available pool is exhausted.
+  function pickCycle(items, shown = new Set(), size = 1) {
+    const pool = unique(items);
+    const current = new Set(pool.map((item) => item.url));
+    let next = new Set([...shown].filter((url) => current.has(url)));
+    let round = new Set();
+    const picked = [];
+    while (picked.length < size && pool.length) {
+      let available = pool.filter((item) => !next.has(item.url) && !round.has(item.url));
+      if (!available.length) {
+        if (next.size >= pool.length) next = new Set();
+        available = pool.filter((item) => !next.has(item.url) && !round.has(item.url));
+      }
+      if (!available.length) {
+        round = new Set();
+        available = pool.filter((item) => !next.has(item.url));
+      }
+      const item = available[0];
+      picked.push({ ...item });
+      next.add(item.url);
+      round.add(item.url);
+    }
+    return { items: picked, shown: next };
+  }
+
+  const pickStories = pickCycle;
+
+  function weightedChoice(kinds, weights, random) {
+    const total = kinds.reduce((sum, kind) => sum + weights[kind], 0);
+    let draw = random() * total;
+    for (const kind of kinds) {
+      draw -= weights[kind];
+      if (draw < 0) return kind;
+    }
+    return kinds[kinds.length - 1];
+  }
+
+  function createSchedule({ weights = DEFAULT_WEIGHTS, maxNewsGap = DEFAULT_GUARDS.maxNewsGap,
+    maxWeatherGap = DEFAULT_GUARDS.maxWeatherGap, availability = {}, length = ROTATION_SIZE,
+    state = {}, random = Math.random } = {}) {
+    const active = Object.keys(DEFAULT_WEIGHTS).filter((kind) => weights[kind] > 0 && availability[kind] !== false);
+    if (!active.length) return { kinds: ['news'], state: { lastKind: 'news', newsGap: 0, weatherGap: 0 } };
+    let lastKind = state.lastKind || '';
+    let newsGap = Number.isInteger(state.newsGap) ? state.newsGap : 0;
+    let weatherGap = Number.isInteger(state.weatherGap) ? state.weatherGap : 0;
+    const kinds = [];
+    while (kinds.length < length) {
+      let candidates = active.filter((kind) => kind !== lastKind);
+      if (!candidates.length) candidates = active;
+      const newsDue = newsGap >= maxNewsGap && candidates.includes('article');
+      const weatherCandidates = candidates.filter((kind) => ['weather', 'radar'].includes(kind));
+      const weatherDue = weatherGap >= maxWeatherGap && weatherCandidates.length;
+      let eligible = candidates;
+      if (newsDue && weatherDue) eligible = newsGap / maxNewsGap >= weatherGap / maxWeatherGap
+        ? ['article'] : weatherCandidates;
+      else if (newsDue) eligible = ['article'];
+      else if (weatherDue) eligible = weatherCandidates;
+      else if (newsGap >= maxNewsGap - 1 && weatherGap >= maxWeatherGap - 1 && candidates.includes('article')) {
+        // Avoid both guarantees becoming due on the same draw; weather will be due next.
+        eligible = ['article'];
+      }
+      const kind = weightedChoice(eligible, weights, random);
+      kinds.push(kind);
+      lastKind = kind;
+      newsGap = kind === 'article' ? 0 : newsGap + 1;
+      weatherGap = ['weather', 'radar'].includes(kind) ? 0 : weatherGap + 1;
+    }
+    return { kinds, state: { lastKind, newsGap, weatherGap } };
+  }
+
+  function createEdition(stories, { schedule = [], pictures = [], cartoons = [], media = [] } = {}) {
+    const queues = { article: [...stories], picture: [...pictures], cartoon: [...cartoons], media: [...media] };
+    const counts = Object.fromEntries(Object.keys(queues).map((kind) => [kind, queues[kind].length]));
+    return schedule.map((kind) => {
+      if (kind === 'article') return { panel: 'article', kind, item: queues.article.shift(),
+        index: counts.article - queues.article.length - 1, count: counts.article };
+      if (kind === 'picture' || kind === 'cartoon') return { panel: 'picture', kind, item: queues[kind].shift() };
+      if (kind === 'media') return { panel: 'media', kind, item: queues.media.shift() };
+      return { panel: kind, kind };
+    });
+  }
+
+  const api = { ROTATION_SIZE, DEFAULT_WEIGHTS, DEFAULT_GUARDS, pickCycle, pickStories, shuffle,
+    createSchedule, createEdition };
   if (typeof module !== 'undefined') module.exports = api;
   else root.DashboardEdition = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

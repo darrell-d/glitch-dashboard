@@ -4,6 +4,12 @@
 
 ### Features
 
+- Replace the fixed display order with stable 20-screen weighted random editions. News defaults
+  to 50%, current weather to 20%, radar to 10%, and supporting screens share the remaining 20%.
+  Configurable recurrence limits keep news and the combined weather group from disappearing for
+  too long, while article and art pools exhaust their available items before repeating.
+- Add a Rotation tab to Settings for per-screen weights and maximum news/weather gaps, persisted
+  by the dashboard server and shared by every display.
 - Default both weather screens (conditions and radar) to two minutes, and hold each
   air-quality, sky-event, wind, or moon ticker item for ten seconds.
 - Add one modern political cartoon published by The Guardian within the previous

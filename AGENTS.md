@@ -9,23 +9,22 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   generative art. New screens should follow the extensible, full-screen direction
   documented in `VISION.md`.
 - Keep the experience full-viewport and readable at a distance.
-- Keep rotation timing and transition choice configurable. Per-screen-type times live on the
-  server (`/api/settings`, `data/settings.json`); other display options stay in the browser.
+- Keep rotation timing, weights, recurrence gaps, and transition choice configurable. Per-screen-type
+  times and rotation rules live on the server (`/api/settings`, `data/settings.json`); other display
+  options stay in the browser.
 - Daily pictures: five newest NASA Images of the Day, five daily random NASA Image Library picks,
-  and five Wikimedia Commons pictures of the day (`load_pictures`), three per batch in random
-  non-adjacent gaps (`createEdition`). One political cartoon published by The Guardian within the
-  last seven days is guaranteed per batch using the same picture screen. One Wikimedia
-  media-of-the-day video is also inserted per batch, autoplays muted, owns rotation until playback
+  and five Wikimedia Commons pictures of the day (`load_pictures`). Current political cartoons from
+  The Guardian use the same full-screen presentation. Wikimedia
+  media-of-the-day video autoplays muted, owns rotation until playback
   ends, and shows a remaining-time bar. Do not
   scrape Reuters, NYT, or Bloomberg pages (automated collection prohibited or blocked); the
   Guardian's free API tier excludes current galleries.
-- Rotation core: three individual story pages, weather, regional radar, an S&P 500 market heatmap
-  (TradingView's free embeddable widget, created once in `renderMarkets`), quote, a photo wall of
-  current story images (three uncropped rows drifting in alternating directions at standard, faster, and slower speeds),
-  then the next batch, with daily pictures and one featured video inserted into non-adjacent gaps.
-  No headline overview/list.
-  `public/edition.js` fixes the batch during display;
-  each batch takes unshown stories first so new stories appear in the next batch.
+- `public/edition.js` creates stable 20-screen weighted editions. Default weights are article 50,
+  weather 20, radar 10, markets 4, quote 4, photo wall 4, daily picture 3, cartoon 3, and video 2.
+  Weather and radar share a recurrence group. Avoid adjacent copies of the same screen type when another
+  enabled screen is available; allow at most three non-news screens and six non-weather screens by
+  default. Both weights and gaps are server settings. Content pools exhaust available articles and
+  art before repeating, and feed refreshes wait for the next edition. No headline overview/list.
 - Use requestAnimationFrame for smooth elapsed-time progress, preserving pause
   and resume. Keep upstream polling independent of that animation loop.
 - Newspaper pages use RSS headlines, images/captions/credits, and short
