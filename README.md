@@ -51,11 +51,11 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   Settings. The monochrome color is also configurable, with a light sage default
   chosen for the dark green display. The pinned SVG assets are served locally
   for display reliability.
-  A secondary slot beneath the conditions rotates through active alerts
-  (National Weather Service warnings such as heat, cold, fire, tornado, and
-  hurricane; US AQI above 100; UV index 6+), sliding each up in turn. With no
-  alerts it shows what is next in the sky: sunrise from 4:30 AM, sunset while the
-  sun is up, then tonight's moonrise, then the moon phase. Moonrise and phase use
+  A secondary slot beneath the conditions always rotates wind speed and direction,
+  active alerts (National Weather Service warnings such as heat, cold, fire, tornado,
+  and hurricane; US AQI above 100; UV index 6+), and what is next in the sky: sunrise
+  from 4:30 AM, sunset while the sun is up, then tonight's moonrise, then the moon phase.
+  Each item slides upward in turn. Moonrise and phase use
   a local astronomical calculation; sunrise and sunset come from Open-Meteo.
   Data and icon attribution is in Settings instead of on the weather screen.
 - **Regional radar:** A full-screen map centered on the selected ZIP, with four

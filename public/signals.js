@@ -1,7 +1,7 @@
 (function (root) {
   'use strict';
 
-  // The variable weather slot: active alerts rotate; otherwise show the next sky event.
+  // The variable weather slot always rotates wind with alerts and the next sky event.
   const SUNRISE_LEAD = '04:30';
   const UV_THRESHOLD = 6;
   const AQI_THRESHOLD = 101;
@@ -109,10 +109,24 @@
     return list;
   }
 
-  // Everything the slot should cycle through right now; always at least one item.
-  function items(now, weather, place, moon, timeZone) {
+  function wind(weather, weatherVisual, seed = '') {
+    const speed = weather.current?.wind_speed_10m;
+    if (!Number.isFinite(speed) || !weatherVisual) return null;
+    const direction = weatherVisual.windDirection(weather.current?.wind_direction_10m);
+    const directionNames = { n: 'north', ne: 'northeast', e: 'east', se: 'southeast',
+      s: 'south', sw: 'southwest', w: 'west', nw: 'northwest' };
+    const rounded = Math.round(speed);
+    const detail = direction ? `From ${directionNames[direction]}` : speed < 12 ? 'Light wind' : speed < 25 ? 'Moderate wind' : 'Strong wind';
+    const icons = [weatherVisual.windStrengthIcon(speed, seed)];
+    if (direction) icons.push(`wind-direction-${direction}`);
+    return { kind: 'wind', icon: icons[0], icons, title: `Wind · ${rounded} mph`, detail,
+      label: `Wind ${rounded} miles per hour${direction ? ` from ${directionNames[direction]}` : ''}` };
+  }
+
+  // Everything the slot should cycle through right now; always includes astronomy.
+  function items(now, weather, place, moon, timeZone, weatherVisual, seed = '') {
     const active = alerts(now, weather, timeZone);
-    return active.length ? active : [astronomy(now, weather, place, moon)];
+    return [wind(weather, weatherVisual, seed), ...active, astronomy(now, weather, place, moon)].filter(Boolean);
   }
 
   function key(item) {
@@ -120,7 +134,7 @@
   }
 
   const api = { SUNRISE_LEAD, UV_THRESHOLD, AQI_THRESHOLD, ROTATE_MS, localTime, duration, astronomy,
-    alertIcon, alerts, items, key };
+    alertIcon, alerts, wind, items, key };
   if (typeof module !== 'undefined') module.exports = api;
   else root.WeatherSignals = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

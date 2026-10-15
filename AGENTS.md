@@ -39,9 +39,10 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   adjustable saved color and must remain legible on the dark green background.
   No provider/Outside labels on the screen; attribution stays in Settings.
 - Weather has a secondary variable slot under the conditions, kept visually subordinate
-  to temperature and conditions. Active alerts (NWS, US AQI > 100, UV 6+) rotate with an
-  upward slide; otherwise it shows sunrise from 4:30 AM, sunset while the sun is up,
-  tonight's moonrise, then the locally calculated moon phase. Logic is in `public/signals.js`.
+  to temperature and conditions. Wind is always one item in its upward-sliding carousel,
+  alongside active alerts (NWS, US AQI > 100, UV 6+) and the current astronomy item:
+  sunrise from 4:30 AM, sunset while the sun is up, tonight's moonrise, or the locally
+  calculated moon phase. Logic is in `public/signals.js`.
   US pollen still lacks a provider.
 - Weather includes a compact next-12-hours strip with time, condition, Fahrenheit
   temperature, and precipitation probability; keep the current reading dominant.

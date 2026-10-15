@@ -68,8 +68,6 @@ function node(tag, className, text) {
 }
 function number(value) { return Number.isFinite(value) ? Math.round(value) : '–'; }
 function celsius(value) { return number((value - 32) * 5 / 9); }
-const WIND_DIRECTION_NAMES = { n: 'north', ne: 'northeast', e: 'east', se: 'southeast',
-  s: 'south', sw: 'southwest', w: 'west', nw: 'northwest' };
 function displayHour(stamp, index) {
   if (index === 0) return 'NOW';
   const hour = Number(stamp.slice(11, 13));
@@ -163,23 +161,7 @@ function renderWeather(data) {
   conditions.append(node('p', 'condition-label', condition(now.weather_code)));
   const details = node('div', 'weather-detail');
   details.append(node('div', '', `Feels like ${number(now.apparent_temperature)}°F / ${celsius(now.apparent_temperature)}°C`));
-  const atmosphere = node('div', 'weather-atmosphere');
-  atmosphere.append(node('span', '', `Humidity ${number(now.relative_humidity_2m)}%`));
-  const direction = WeatherVisual.windDirection(now.wind_direction_10m);
-  const wind = node('span', 'wind-reading');
-  wind.setAttribute('aria-label', `Wind ${number(now.wind_speed_10m)} miles per hour${direction ? ` from ${WIND_DIRECTION_NAMES[direction]}` : ''}`);
-  const windStrength = node('span', 'wind-strength-icon');
-  const localDay = new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeZone: config.timezone }).format(new Date());
-  const strengthName = WeatherVisual.windStrengthIcon(now.wind_speed_10m, `${config.postal_code}:${localDay}`);
-  windStrength.innerHTML = WeatherVisual.named(strengthName, iconStyle, options.weatherIconColor);
-  wind.append(windStrength, node('span', 'wind-speed', `${number(now.wind_speed_10m)} mph`));
-  if (direction) {
-    const directionIcon = node('span', 'wind-direction-icon');
-    directionIcon.innerHTML = WeatherVisual.named(`wind-direction-${direction}`, iconStyle, options.weatherIconColor);
-    wind.append(directionIcon, node('span', 'wind-direction-label', direction.toUpperCase()));
-  }
-  atmosphere.append(wind);
-  details.append(atmosphere);
+  details.append(node('div', '', `Humidity ${number(now.relative_humidity_2m)}%`));
   const signal = node('div', 'weather-signal');
   signal.setAttribute('aria-live', 'polite');
   conditions.append(details, signal);
@@ -234,18 +216,24 @@ function signalItem(item) {
   if (item.severity) element.dataset.severity = item.severity;
   element.setAttribute('role', 'img');
   element.setAttribute('aria-label', item.label);
-  const icon = node('span', 'signal-icon');
-  icon.setAttribute('aria-hidden', 'true');
-  icon.innerHTML = WeatherVisual.named(item.icon, signalSlot.iconStyle, options.weatherIconColor);
+  const icons = node('span', 'signal-icons');
+  icons.setAttribute('aria-hidden', 'true');
+  for (const iconName of item.icons || [item.icon]) {
+    const icon = node('span', 'signal-icon');
+    icon.innerHTML = WeatherVisual.named(iconName, signalSlot.iconStyle, options.weatherIconColor);
+    icons.append(icon);
+  }
   const text = node('div', 'signal-text');
   text.append(node('div', 'signal-title', item.title), node('div', 'signal-detail', item.detail));
-  element.append(icon, text);
+  element.append(icons, text);
   return element;
 }
 function updateWeatherSignal() {
   if (!signalSlot.element) return;
   const now = Date.now();
-  const items = WeatherSignals.items(now, signalSlot.data, config, MoonPhase, config.timezone);
+  const localDay = new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeZone: config.timezone }).format(new Date(now));
+  const items = WeatherSignals.items(now, signalSlot.data, config, MoonPhase, config.timezone,
+    WeatherVisual, `${config.postal_code}:${localDay}`);
   const found = items.findIndex((item) => signalId(item) === signalSlot.id);
   const due = now - signalSlot.shownAt >= WeatherSignals.ROTATE_MS;
   const index = found < 0 ? 0 : items.length > 1 && due ? (found + 1) % items.length : found;

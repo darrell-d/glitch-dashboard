@@ -177,10 +177,10 @@ test('weather renders night-aware central imagery and five forecast icons', asyn
   assert.equal(hourly.children[1].children.length, 12);
   assert.equal(hourly.children[1].children[0].children[0].textContent, 'NOW');
   assert.match(hourly.children[1].children[5].attributes['aria-label'], /35% chance of precipitation/);
-  const wind = summary.children[2].children[1].children[1].children[1];
-  assert.match(wind.attributes['aria-label'], /9 miles per hour from southwest/);
-  assert.match(wind.children[0].innerHTML, /\/(windsock-calm|windsock-weak|wind-spinner|windmill)\.svg/);
-  assert.match(wind.children[2].innerHTML, /\/wind-direction-sw\.svg/);
+  assert.equal(slot.children[0].dataset.kind, 'wind');
+  assert.match(slot.children[0].attributes['aria-label'], /9 miles per hour from southwest/);
+  assert.match(slot.children[0].children[0].children[0].innerHTML, /\/(windsock-calm|windsock-weak|wind-spinner|windmill)\.svg/);
+  assert.match(slot.children[0].children[0].children[1].innerHTML, /\/wind-direction-sw\.svg/);
 });
 
 test('weather icon style can be fixed in settings', async () => {
