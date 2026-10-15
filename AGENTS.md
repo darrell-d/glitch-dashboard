@@ -11,14 +11,18 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
 - Keep the experience full-viewport and readable at a distance.
 - Keep rotation timing and transition choice configurable. Per-screen-type times live on the
   server (`/api/settings`, `data/settings.json`); other display options stay in the browser.
-- NASA pictures: five newest Images of the Day plus five daily random NASA Image Library picks
-  (`load_pictures`), three per batch in random non-adjacent gaps (`createEdition`). Do not
+- Daily pictures: five newest NASA Images of the Day, five daily random NASA Image Library picks,
+  and five Wikimedia Commons pictures of the day (`load_pictures`), three per batch in random
+  non-adjacent gaps (`createEdition`). One Wikimedia media-of-the-day video is also inserted per
+  batch, autoplays muted, and owns rotation until playback ends. Do not
   scrape Reuters, NYT, or Bloomberg pages (automated collection prohibited or blocked); the
   Guardian's free API tier excludes current galleries.
-- Rotation: three individual story pages, weather, regional radar, an S&P 500 market heatmap
+- Rotation core: three individual story pages, weather, regional radar, an S&P 500 market heatmap
   (TradingView's free embeddable widget, created once in `renderMarkets`), quote, a photo wall of
-  current story images (three uncropped rows drifting in alternating directions at standard, faster, and slower speeds), then the next batch.
-  No headline overview/list. `public/edition.js` fixes the batch during display;
+  current story images (three uncropped rows drifting in alternating directions at standard, faster, and slower speeds),
+  then the next batch, with daily pictures and one featured video inserted into non-adjacent gaps.
+  No headline overview/list.
+  `public/edition.js` fixes the batch during display;
   each batch takes unshown stories first so new stories appear in the next batch.
 - Use requestAnimationFrame for smooth elapsed-time progress, preserving pause
   and resume. Keep upstream polling independent of that animation loop.
@@ -66,7 +70,8 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   NYT homepage headlines, and 30-second panels (markets 60, photo wall 300).
 - Keep source/category expansion easy; detailed news preferences are deferred.
 - `sources.py` configures NYT, CNN, Kotaku, WSJ, The Atlantic, POLITICO, WIRED,
-  Ars Technica, TechCrunch, The New Yorker, and local Philadelphia Inquirer (News
+  Ars Technica, TechCrunch, The New Yorker, St. Lucia Times, The Voice St. Lucia,
+  BBC News, and local Philadelphia Inquirer (News
   section), Billy Penn, WHYY (Philadelphia section), The Onion, and Al Jazeera. Cap each source at four distinct
   stories and interleave publishers; label the actual publisher.
 - WSJ uses World News RSS and must be labeled accordingly. CNN uses current Lite

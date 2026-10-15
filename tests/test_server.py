@@ -3,7 +3,7 @@ import io
 import unittest
 from unittest.mock import Mock, patch
 
-from server import (Feed, Handler, SettingsStore, SCREEN_DURATIONS, load_pictures, parse_nasa_iotd, pick_nasa_archive, add_temperatures, fetch, fetch_head, load_major_cities,
+from server import (Feed, Handler, SettingsStore, SCREEN_DURATIONS, load_pictures, parse_nasa_iotd, parse_wikimedia_motd, parse_wikimedia_potd, pick_nasa_archive, add_temperatures, fetch, fetch_head, load_major_cities,
                     location_url, nearby_temperature_url, normalize_postal_code,
                     parse_alerts, parse_air_quality, parse_location, parse_news, parse_quote, parse_radar, parse_weather,
                     select_major_cities, weather_url)
@@ -271,6 +271,35 @@ class NasaPictureTests(unittest.TestCase):
         self.assertEqual(len(load_pictures(broken_archive)["photos"]), 1)
         with self.assertRaises(ValueError):
             load_pictures(Mock(side_effect=OSError("offline")))
+
+
+class WikimediaMediaTests(unittest.TestCase):
+    def atom(self, summary):
+        import html
+        return f'''<feed xmlns="http://www.w3.org/2005/Atom"><entry>
+          <updated>2026-10-14T00:00:00Z</updated><summary type="html">{html.escape(summary)}</summary>
+          </entry></feed>'''
+
+    def test_picture_of_the_day_uses_large_thumbnail_and_description(self):
+        summary = '''<div><a class="mw-file-description" href="/wiki/File:Bird.jpg"><img
+          src="https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Bird.jpg/330px-Bird.jpg"></a>
+          <div class="description en">A bird over the sea.</div></div>'''
+        photo = parse_wikimedia_potd(self.atom(summary))[0]
+        self.assertIn("/2048px-Bird.jpg", photo["url"])
+        self.assertEqual(photo["description"], "A bird over the sea.")
+        self.assertEqual(photo["credit"], "Wikimedia Commons contributors")
+
+    def test_media_of_the_day_chooses_1080p_video(self):
+        summary = '''<div><video poster="https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Film.webm/330px-Film.webm.jpg"
+          data-durationhint="42" data-mwtitle="Film.webm"><source
+          src="https://upload.wikimedia.org/wikipedia/commons/transcoded/a/ab/Film.webm/Film.webm.480p.vp9.webm"
+          type="video/webm" data-width="854"><source
+          src="https://upload.wikimedia.org/wikipedia/commons/transcoded/a/ab/Film.webm/Film.webm.1080p.vp9.webm"
+          type="video/webm" data-width="1920"></video><div class="description en">A short film.</div></div>'''
+        video = parse_wikimedia_motd(self.atom(summary))[0]
+        self.assertIn("1080p", video["url"])
+        self.assertIn("/1920px-Film.webm.jpg", video["poster"])
+        self.assertEqual((video["title"], video["duration"]), ("A short film.", 42.0))
 
 if __name__ == "__main__":
     unittest.main()

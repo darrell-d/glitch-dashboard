@@ -75,6 +75,7 @@ Persistent navigation and application chrome should stay out of the composition.
 - Mandelbrot and related fractal explorations.
 - Mathematical sequences and algorithmic animation.
 - Existing generative-art projects such as LawnMower.
+- Curated full-screen pictures and video from NASA and Wikimedia Commons.
 - Future experiments that can render autonomously in a browser.
 
 ## Extensible Screen Model

@@ -34,9 +34,11 @@ class Element {
   addEventListener(name, listener) { this.listeners[name] = listener; }
   click() { this.listeners.click?.(); }
   showModal() { this.open = true; }
+  play() { this.playing = true; return Promise.resolve(); }
+  pause() { this.playing = false; }
 }
 
-async function app(hash = '', { storyCount = 3, weather = null, settings = null, pictures = null } = {}) {
+async function app(hash = '', { storyCount = 3, weather = null, settings = null, pictures = null, media = null } = {}) {
   const posts = [];
   const markup = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
   const elements = Object.fromEntries([...markup.matchAll(/id="([^"]+)"/g)].map((match) => [match[1], new Element()]));
@@ -65,7 +67,7 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
     fetch: async (url, init = {}) => ({ ok: true, json: async () => {
       if (url === '/api/settings' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return JSON.parse(init.body); }
       if (url === '/api/settings' && settings) return settings;
-      if (url === '/api/pictures' && pictures) return { data: { photos: pictures }, updated_at: new Date().toISOString(), stale: false };
+      if (url === '/api/pictures' && (pictures || media)) return { data: { photos: pictures || [], videos: media || [] }, updated_at: new Date().toISOString(), stale: false };
       if (url.startsWith('/api/config')) return { location: 'Philadelphia', region: 'Pennsylvania', postal_code: '19103', latitude: 39.95, longitude: -75.16, timezone: 'America/New_York' };
       if (url === '/api/news') return { data: { items }, updated_at: new Date().toISOString(), stale: false };
       if (url.startsWith('/api/weather') && weather) return { data: weather, updated_at: new Date().toISOString(), stale: false };
@@ -142,6 +144,21 @@ test('NASA pictures appear in the next batch with title, description, and credit
   assert.match(screen.elements['picture-caption'].textContent, /^Title \d$/);
   assert.match(screen.elements['picture-credit'].textContent, /^Image: Photographer \d$/);
   assert.equal(screen.elements['picture-image'].src, screen.run("screens[current].item.url"));
+});
+
+test('featured video owns rotation until playback ends', async () => {
+  const media = [{ url: 'https://upload.wikimedia.org/video.webm', type: 'video/webm',
+    poster: 'https://thumb.wikimedia.org/poster.jpg', kicker: 'Wikimedia media of the day',
+    title: 'A featured film', credit: 'Wikimedia Commons contributors' }];
+  const screen = await app('', { media });
+  screen.run('showPanel(screens.length)');
+  screen.run("showPanel(screens.findIndex((item) => item.panel === 'media'))");
+  assert.equal(screen.elements.media.classList.contains('active'), true);
+  assert.equal(screen.elements['media-video'].playing, true);
+  screen.advance(600000);
+  assert.equal(screen.elements.media.classList.contains('active'), true);
+  screen.elements['media-video'].onended();
+  assert.equal(screen.elements.media.classList.contains('active'), false);
 });
 
 test('direct story URL opens a photo page once feed data is available', async () => {

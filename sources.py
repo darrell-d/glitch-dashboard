@@ -29,6 +29,10 @@ SOURCES = [
      "url": "https://theonion.com/wp-json/wp/v2/posts?per_page=12&_embed=wp:featuredmedia&_fields=id,link,title,excerpt,date_gmt,_embedded,_links"},
     # Al Jazeera's RSS has no images; each selected story's public page metadata supplies its photo.
     {"id": "aljazeera", "name": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "enrich": True},
+    {"id": "stluciatimes", "name": "St. Lucia Times", "url": "https://stluciatimes.com/feed/"},
+    # The Voice feed has useful excerpts but leaves the featured image to article metadata.
+    {"id": "thevoice", "name": "The Voice St. Lucia", "url": "https://thevoiceslu.com/feed/", "enrich": True},
+    {"id": "bbc", "name": "BBC News", "url": "https://feeds.bbci.co.uk/news/rss.xml", "image_size": "bbc"},
 ]
 ATOM = "{http://www.w3.org/2005/Atom}"
 MEDIA = "{http://search.yahoo.com/mrss/}"
@@ -83,11 +87,14 @@ def finish(items, source):
     selected = (with_photos or stories)[:4]
     public = []
     for item in selected:
+        image_url = item.get("image_url", "")
+        if source.get("image_size") == "bbc":
+            image_url = image_url.replace("/ace/standard/240/", "/ace/standard/1024/")
         public.append({
             "source_id": source["id"], "source": source["name"], "selection": source.get("selection", ""),
             "title": item["title"], "url": item["url"], "published": item.get("published"),
             "description": item.get("description", ""), "author": item.get("author", ""),
-            "image_url": item.get("image_url", ""), "image_caption": item.get("image_caption", ""),
+            "image_url": image_url, "image_caption": item.get("image_caption", ""),
             "image_credit": item.get("image_credit", ""),
         })
     return {"source": source["name"], "items": public}

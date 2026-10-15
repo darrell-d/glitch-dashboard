@@ -12,7 +12,7 @@ class PublisherTests(unittest.TestCase):
     def test_all_requested_publishers_are_configured(self):
         self.assertEqual({source["id"] for source in SOURCES}, {
             "nyt", "cnn", "kotaku", "wsj", "atlantic", "politico", "wired", "ars", "techcrunch", "newyorker",
-            "inquirer", "billypenn", "whyy", "onion", "aljazeera"})
+            "inquirer", "billypenn", "whyy", "onion", "aljazeera", "stluciatimes", "thevoice", "bbc"})
 
     def test_stories_with_photos_are_preferred_when_a_feed_has_them(self):
         titles = ["Senate passes budget", "Astronomers find planet", "Museum restores statue",
@@ -78,6 +78,14 @@ class PublisherTests(unittest.TestCase):
         item = parse_news(raw, SOURCE)["items"][0]
         self.assertEqual(item["image_url"], "https://example.com/photo.jpg")
         self.assertEqual(item["image_caption"], "A scene")
+
+    def test_bbc_thumbnail_is_promoted_to_display_size(self):
+        source = {"id": "bbc", "name": "BBC News", "url": "https://feeds.bbci.co.uk/news/rss.xml", "image_size": "bbc"}
+        raw = b'''<rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>
+          <title>A BBC report</title><link>https://www.bbc.co.uk/news/articles/example</link>
+          <media:thumbnail url="https://ichef.bbci.co.uk/ace/standard/240/cpsprodpb/photo.jpg"/>
+          </item></channel></rss>'''
+        self.assertIn("/standard/1024/", parse_news(raw, source)["items"][0]["image_url"])
 
     def test_wordpress_uses_excerpt_and_featured_image_without_full_article(self):
         raw = json.dumps([{"title": {"rendered": "A &amp; B"}, "link": "https://example.com/post",

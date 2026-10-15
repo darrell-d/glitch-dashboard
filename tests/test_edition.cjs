@@ -53,6 +53,19 @@ test('pictures land in random gaps, never first and never back to back', () => {
   }
 });
 
+test('featured video uses its own non-adjacent full-screen slot', () => {
+  const pictures = [{ url: 'p1' }, { url: 'p2' }, { url: 'p3' }];
+  const media = [{ url: 'v1', poster: 'poster' }];
+  for (let seed = 0; seed < 30; seed += 1) {
+    let state = seed + 1;
+    const random = () => { state = (state * 16807) % 2147483647; return state / 2147483647; };
+    const panels = createEdition(pickStories(stories).items, { gallery: true, pictures, media, random }).map((screen) => screen.panel);
+    assert.equal(panels.filter((panel) => panel === 'media').length, 1);
+    assert.notEqual(panels[0], 'media');
+    assert.ok(panels.every((panel, i) => !(['picture', 'media'].includes(panel) && ['picture', 'media'].includes(panels[i + 1]))), panels.join());
+  }
+});
+
 test('shuffle keeps every item', () => {
   assert.deepEqual(shuffle(stories).map((item) => item.url).sort(), stories.map((item) => item.url).sort());
 });

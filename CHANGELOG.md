@@ -4,6 +4,10 @@
 
 ### Features
 
+- Add St. Lucia Times, The Voice St. Lucia, and BBC News with four photo-backed
+  stories per publisher and independent failure handling.
+- Add Wikimedia Commons pictures of the day to the full-screen picture pool and
+  a full-screen media-of-the-day video that autoplays muted through completion.
 - Show Meteocons wind-strength and compass-direction icons beside the current wind speed,
   with stable daily variety for light and high winds. Give wind its own conditions line
   so both strength and direction icons remain legible from across the room.

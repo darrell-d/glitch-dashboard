@@ -6,14 +6,14 @@
   <meta name="theme-color" content="#101815">
   <title>The Daily</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23101815'/%3E%3Ctext x='9' y='29' fill='%23c6f294' font-size='30'%3Eg%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/styles.css?v=daily-25">
-  <link rel="stylesheet" href="/newspaper.css?v=daily-25">
-  <script src="/edition.js?v=daily-25" defer></script>
-  <script src="/weather.js?v=daily-25" defer></script>
-  <script src="/moon.js?v=daily-25" defer></script>
-  <script src="/signals.js?v=daily-25" defer></script>
-  <script src="/radar.js?v=daily-25" defer></script>
-  <script src="/app.js?v=daily-25" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=daily-26">
+  <link rel="stylesheet" href="/newspaper.css?v=daily-26">
+  <script src="/edition.js?v=daily-26" defer></script>
+  <script src="/weather.js?v=daily-26" defer></script>
+  <script src="/moon.js?v=daily-26" defer></script>
+  <script src="/signals.js?v=daily-26" defer></script>
+  <script src="/radar.js?v=daily-26" defer></script>
+  <script src="/app.js?v=daily-26" defer></script>
 </head>
 <body data-transition="fade">
   <main id="display">
@@ -78,6 +78,16 @@
       </div>
     </section>
 
+    <section class="panel media" id="media" aria-labelledby="media-caption" inert aria-hidden="true">
+      <img id="media-backdrop" class="media-backdrop" alt="" aria-hidden="true">
+      <video id="media-video" class="media-video" playsinline muted preload="metadata"></video>
+      <div class="media-caption-block">
+        <div id="media-kicker" class="media-kicker"></div>
+        <h2 id="media-caption" class="media-caption"></h2>
+        <div class="media-credit" id="media-credit"></div>
+      </div>
+    </section>
+
     <section class="panel gallery" id="gallery" aria-label="Photos from today's stories" inert aria-hidden="true">
       <div id="gallery-rows" class="gallery-rows"></div>
     </section>
@@ -117,7 +127,7 @@
         </div>
         <p id="screen-times-status" role="status"></p>
       </div>
-      <p class="data-credit">Weather and air quality: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> · Alerts: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a><br>Radar: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> · Forecast maps: <a href="https://www.weatherapi.com/" target="_blank" rel="noopener">WeatherAPI.com</a> · City locations: <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> · CC BY 4.0<br>Market heatmap: <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a> · Pictures: <a href="https://www.nasa.gov/image-of-the-day/" target="_blank" rel="noopener">NASA Image of the Day</a> and <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a><br>Weather icons: <a href="https://meteocons.com/" target="_blank" rel="noopener">Meteocons</a> · MIT</p>
+      <p class="data-credit">Weather and air quality: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a> · Alerts: <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a><br>Radar: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> · Forecast maps: <a href="https://www.weatherapi.com/" target="_blank" rel="noopener">WeatherAPI.com</a> · City locations: <a href="https://www.geonames.org/" target="_blank" rel="noopener">GeoNames</a> · CC BY 4.0<br>Market heatmap: <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a> · Pictures: <a href="https://www.nasa.gov/image-of-the-day/" target="_blank" rel="noopener">NASA Image of the Day</a>, <a href="https://images.nasa.gov/" target="_blank" rel="noopener">NASA Image and Video Library</a>, and <a href="https://commons.wikimedia.org/wiki/Commons:Featured_content" target="_blank" rel="noopener">Wikimedia Commons featured media</a><br>Weather icons: <a href="https://meteocons.com/" target="_blank" rel="noopener">Meteocons</a> · MIT</p>
       <div class="dialog-actions"><button value="cancel" formnovalidate>Cancel</button><button value="save" class="primary">Save settings</button></div>
     </form>
   </dialog>

@@ -2,7 +2,7 @@
 
 const $ = (id) => document.getElementById(id);
 const names = ['news', 'weather', 'radar', 'quote'];
-const panels = ['news', 'article', 'weather', 'radar', 'markets', 'quote', 'gallery', 'picture'];
+const panels = ['news', 'article', 'weather', 'radar', 'markets', 'quote', 'gallery', 'picture', 'media'];
 const GALLERY_ROWS = 3;
 const GALLERY_MIN_PHOTOS = 6;
 // Photo-wall rows cycle standard, faster, slower; the standard pace is 14 seconds per photo.
@@ -17,6 +17,9 @@ let current = 0;
 // URLs already shown this cycle, so new stories go into the next batch.
 let shownStories = new Set();
 let shownPictures = new Set();
+let shownMedia = new Set();
+let mediaToken = 0;
+let mediaFallbackTimer;
 let paused = false;
 let started = performance.now();
 let elapsed = 0;
@@ -435,10 +438,36 @@ function renderPicture(photo) {
   $('picture-description').textContent = photo.description;
   $('picture-credit').textContent = photo.credit ? `Image: ${photo.credit}` : '';
 }
+function renderMedia(item) {
+  const video = $('media-video');
+  const token = ++mediaToken;
+  clearTimeout(mediaFallbackTimer);
+  $('media-backdrop').src = item.poster || '';
+  video.pause();
+  video.poster = item.poster || '';
+  video.src = item.url;
+  video.type = item.type || 'video/webm';
+  video.muted = true;
+  $('media-kicker').textContent = item.kicker || 'Wikimedia media of the day';
+  $('media-caption').textContent = item.title || '';
+  $('media-credit').textContent = item.credit || '';
+  const advance = () => {
+    if (token === mediaToken && screens[current]?.panel === 'media') showPanel(current + 1);
+  };
+  video.onended = advance;
+  video.onerror = advance;
+  video.onplaying = () => clearTimeout(mediaFallbackTimer);
+  mediaFallbackTimer = setTimeout(advance, 15000);
+  if (paused) clearTimeout(mediaFallbackTimer);
+  else {
+    const playback = video.play();
+    if (playback?.catch) playback.catch(() => { /* The fallback advances if autoplay is unavailable. */ });
+  }
+}
 async function refreshPictures() {
   try {
     const value = await request('/api/pictures');
-    if (value.data?.photos) records.pictures = value;
+    if (value.data?.photos || value.data?.videos) records.pictures = value;
   } catch { /* Picture screens are optional; skip them until the feed is available. */ }
 }
 function nextEdition(items) {
@@ -446,13 +475,18 @@ function nextEdition(items) {
   shownStories = batch.shown;
   const photos = items.filter(hasPhoto);
   const gallery = photos.length >= GALLERY_MIN_PHOTOS;
-  // NASA pictures: a few shuffled, not-yet-shown photos dropped into random gaps.
+  // Daily pictures and media are shuffled into non-adjacent gaps in each edition.
   const dayPictures = records.pictures?.data?.photos || [];
   const pictureBatch = DashboardEdition.pickStories(DashboardEdition.shuffle(dayPictures), shownPictures,
     Math.min(DashboardEdition.PICTURES_PER_BATCH, dayPictures.length));
   shownPictures = pictureBatch.shown;
   pictureBatch.items.forEach((photo) => { const preload = new Image(); preload.src = photo.url; });
-  screens = DashboardEdition.createEdition(batch.items, { gallery, pictures: pictureBatch.items });
+  const dayMedia = records.pictures?.data?.videos || [];
+  const mediaBatch = DashboardEdition.pickStories(DashboardEdition.shuffle(dayMedia), shownMedia,
+    Math.min(DashboardEdition.MEDIA_PER_BATCH, dayMedia.length));
+  shownMedia = mediaBatch.shown;
+  mediaBatch.items.forEach((item) => { if (item.poster) { const preload = new Image(); preload.src = item.poster; } });
+  screens = DashboardEdition.createEdition(batch.items, { gallery, pictures: pictureBatch.items, media: mediaBatch.items });
   // Build the photo wall with the batch so its images load well before it appears.
   if (gallery) renderGallery(photos);
 }
@@ -480,6 +514,7 @@ function renderGallery(photos) {
   }));
 }
 function showPanel(index) {
+  const previousPanel = screens[current]?.panel;
   if (index >= screens.length) {
     if (records.news) {
       nextEdition(records.news.data.items);
@@ -489,8 +524,13 @@ function showPanel(index) {
   }
   current = (index + screens.length) % screens.length;
   const screen = screens[current];
+  if (previousPanel === 'media' && screen.panel !== 'media') {
+    mediaToken += 1;
+    clearTimeout(mediaFallbackTimer);
+    $('media-video').pause();
+  }
   document.body.dataset.view = screen.panel;
-  document.querySelector('.footer').inert = screen.panel === 'article';
+  document.querySelector('.footer').inert = ['article', 'media'].includes(screen.panel);
   panels.forEach((name) => {
     const active = name === screen.panel;
     $(name).classList.toggle('active', active);
@@ -499,6 +539,7 @@ function showPanel(index) {
   });
   if (screen.panel === 'article') renderArticle(screen);
   if (screen.panel === 'picture') renderPicture(screen.item);
+  if (screen.panel === 'media') renderMedia(screen.item);
   if (screen.panel === 'radar') showRadarFrame(radarFrameIndex);
   if (screen.panel === 'quote') { refresh('quote'); requestAnimationFrame(fitQuote); }
   history.replaceState(null, '', `#${screen.panel}`);
@@ -509,11 +550,20 @@ function setPaused(value) {
   if (value) elapsed += performance.now() - started;
   else started = performance.now();
   paused = value;
+  if (screens[current]?.panel === 'media') {
+    if (paused) { clearTimeout(mediaFallbackTimer); $('media-video').pause(); }
+    else $('media-video').play().catch(() => {});
+  }
   $('pause').textContent = paused ? 'Resume' : 'Pause';
   $('paper-pause').textContent = paused ? 'Resume' : 'Pause';
   $('pause').setAttribute('aria-label', paused ? 'Resume rotation' : 'Pause rotation');
 }
 function tick() {
+  if (screens[current]?.panel === 'media') {
+    $('progress').style.transform = 'scaleX(0)';
+    $('article-progress').style.transform = 'scaleX(0)';
+    return;
+  }
   const total = screenSeconds(screens[current]?.panel) * 1000;
   let used = elapsed + (paused ? 0 : performance.now() - started);
   if (used >= total && !paused) { showPanel(current + 1); used = 0; }

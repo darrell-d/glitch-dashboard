@@ -29,7 +29,7 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
 
 ## Panels
 
-- **Stories:** Four distinct stories per publisher from the ten sources below,
+- **Stories:** Four distinct stories per publisher from the sources below,
   shown individually in a warm newspaper layout. Related companions are filtered
   within each source, preserving publisher feed order. Each page has a bold serif
   headline, short description, byline, publication date, and photo credit. On a
@@ -67,8 +67,13 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   map itself stays visually quiet. Missing radar data does not stop the rest of the rotation.
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`, set in
   an editorial lockup with a vertical accent rule and the author below a fine rule.
+- **Featured media:** Wikimedia Commons pictures of the day join the existing NASA
+  picture pool. One Commons media-of-the-day video is shuffled into each edition,
+  shown full-screen over a blurred poster fill, autoplayed muted for kiosk reliability,
+  and advances to the next screen when playback ends.
 
-Each rotation shows **three individual story pages → weather → radar → markets → quote → photo wall**, then
+Each rotation keeps **three individual story pages → weather → radar → markets → quote → photo wall**
+as its core sequence, with daily pictures and one featured video shuffled into separate gaps, then
 advances to the next batch of stories. There is no headline list. Every screen uses the
 screen time configured for its type in Settings. The edition's stories stay together
 while new feed data is held for the next batch, so a refresh does not replace
@@ -84,15 +89,18 @@ The countdown bar animates with display frames for smooth movement; pause and
 resume preserve elapsed time. Feed polling is independent of the animation.
 No numeric countdown is shown on any screen; a Ⅱ marks paused rotation.
 
-## NASA pictures
+## Daily pictures and media
 
-Three NASA photos are shuffled into random gaps in each batch, never back to back, each
+Three photos are shuffled into random gaps in each batch, never back to back, each
 shown uncropped with its title, description, and credit. The day's pool is the five newest
 [NASA Image of the Day](https://www.nasa.gov/feeds/iotd-feed/) entries (one new image
 each weekday, resized with `?w=2048` instead of the multi-megabyte originals) plus five
 random public-domain images from the [NASA Image and Video Library](https://images.nasa.gov/),
 picked once per day from astronomy and planetary topics with filters that skip catalog
-codes, ground operations, and thin descriptions. No API key is needed. Reuters and the
+codes, ground operations, and thin descriptions, plus five official
+[Wikimedia Commons pictures of the day](https://commons.wikimedia.org/wiki/Commons:Picture_of_the_day).
+The official Commons media-of-the-day feed supplies direct video transcodes and posters;
+one video appears per edition and controls its own duration. No API key is needed. Reuters and the
 Guardian were considered: Reuters prohibits automated collection, and the Guardian's free
 API tier excludes current photo galleries.
 
@@ -115,13 +123,16 @@ API tier excludes current photo galleries.
 | WHYY | Philadelphia section RSS (the main feed includes newscasts and TV listings) |
 | The Onion | Public WordPress API with featured photos (newest four) |
 | Al Jazeera | All-news RSS; photos and missing details come from each story's public page metadata |
+| St. Lucia Times | Main RSS with embedded story photos |
+| The Voice St. Lucia | Main RSS with photos from public article metadata |
+| BBC News | Main RSS with display-sized BBC image variants |
 
 "Top four" means the first four distinct stories in publisher feed/endpoint order
 (preferring stories with photos when the feed has any),
 which may differ from homepage placement. The related-story filter runs before
 the four-story limit. Fewer are shown if there are insufficient distinct stories.
 Publishers are interleaved by rank: each first story, then each second story, up
-to 60 total. Cross-publisher coverage is retained to preserve four per source.
+to 72 total. Cross-publisher coverage is retained to preserve four per source.
 Weather, radar, an S&P 500 heatmap, quote, and a photo wall remain between batches of three stories.
 The heatmap is TradingView's free embeddable Stock Heatmap widget (sector groups, tiles
 sized by market value and colored by daily change); it loads its own data in the browser.
@@ -140,8 +151,7 @@ Story freshness labels reflect their source. Initial news loading can take up
 to 25 seconds; weather and quotes load independently. NYT-only browser news
 caches are discarded on upgrade.
 
-All ten adapters were checked live with four stories, photos, and descriptions
-each. The reusable check is cataloged in `../tooling/glitch-dashboard/TOOLS.md`:
+The reusable live adapter check is cataloged in `../tooling/glitch-dashboard/TOOLS.md`:
 
 ```sh
 python3 ../tooling/glitch-dashboard/check-news-sources.py --live

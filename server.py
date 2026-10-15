@@ -16,6 +16,7 @@ import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from functools import partial
+from html.parser import HTMLParser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -36,6 +37,8 @@ SCREEN_DURATIONS = {"article": 30, "weather": 30, "radar": 30, "markets": 60, "q
 DURATION_LIMITS = (5, 3600)
 NASA_IOTD_URL = "https://www.nasa.gov/feeds/iotd-feed/"
 NASA_IMAGES_URL = "https://images-api.nasa.gov"
+WIKIMEDIA_POTD_URL = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=atom&language=en"
+WIKIMEDIA_MOTD_URL = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=motd&feedformat=atom&language=en"
 # Specific subjects keep random archive picks on striking imagery rather than launch-pad snapshots.
 NASA_ARCHIVE_TOPICS = ("nebula", "galaxy", "star cluster", "supernova", "planetary nebula", "Jupiter",
                        "Saturn", "Mars surface", "aurora", "Moon surface", "comet", "Earth at night")
@@ -386,6 +389,110 @@ def description_text(value):
     return " ".join(sentence for sentence in sentences if not re.search(r"https?://|www\.", sentence))
 
 
+class FeaturedMediaHTML(HTMLParser):
+    """Small parser for the HTML summaries returned by Commons featured feeds."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.images, self.sources, self.file_url = [], [], ""
+        self.video, self.descriptions, self._description = {}, [], None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        classes = set(attrs.get("class", "").split())
+        if tag == "img":
+            self.images.append(attrs)
+        elif tag == "video":
+            self.video = attrs
+        elif tag == "source":
+            self.sources.append(attrs)
+        elif tag == "a" and "mw-file-description" in classes:
+            self.file_url = urllib.parse.urljoin("https://commons.wikimedia.org", attrs.get("href", ""))
+        elif tag == "div" and "description" in classes and "en" in classes:
+            self._description = []
+
+    def handle_data(self, data):
+        if self._description is not None:
+            self._description.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "div" and self._description is not None:
+            value = " ".join("".join(self._description).split())
+            if value:
+                self.descriptions.append(value)
+            self._description = None
+
+
+def featured_summary(value):
+    parser = FeaturedMediaHTML()
+    parser.feed(value or "")
+    return parser
+
+
+def wikimedia_thumbnail(url, width=2048):
+    """Ask Commons' thumbnail service for a display-sized image while retaining its safe host."""
+    url = html.unescape(url or "")
+    if not url.startswith("https://thumb.wikimedia.org/"):
+        return ""
+    return re.sub(r"/\d+px-", f"/{width}px-", url, count=1)
+
+
+def parse_wikimedia_potd(raw, limit=5):
+    photos = []
+    for entry in ET.fromstring(raw).findall("{http://www.w3.org/2005/Atom}entry"):
+        parsed = featured_summary(entry.findtext("{http://www.w3.org/2005/Atom}summary", ""))
+        image = parsed.images[0] if parsed.images else {}
+        url = wikimedia_thumbnail(image.get("src"))
+        if not url:
+            continue
+        description = parsed.descriptions[0] if parsed.descriptions else "Featured picture from Wikimedia Commons."
+        photos.append({"url": url, "title": "Picture of the day", "description": description,
+                       "credit": "Wikimedia Commons contributors", "kicker": "Wikimedia Commons",
+                       "published": entry.findtext("{http://www.w3.org/2005/Atom}updated"),
+                       "page_url": parsed.file_url})
+        if len(photos) == limit:
+            break
+    if not photos:
+        raise ValueError("Wikimedia picture feed has no images")
+    return photos
+
+
+def parse_wikimedia_motd(raw, limit=3):
+    videos = []
+    for entry in ET.fromstring(raw).findall("{http://www.w3.org/2005/Atom}entry"):
+        parsed = featured_summary(entry.findtext("{http://www.w3.org/2005/Atom}summary", ""))
+        choices = []
+        for source in parsed.sources:
+            url = html.unescape(source.get("src", ""))
+            media_type = source.get("type", "").split(";", 1)[0]
+            try:
+                width = int(source.get("data-width", 0))
+            except (TypeError, ValueError):
+                width = 0
+            if url.startswith("https://upload.wikimedia.org/") and media_type.startswith("video/"):
+                choices.append((width, url, media_type))
+        if not choices:
+            continue
+        suitable = [choice for choice in choices if choice[0] <= 1920] or choices
+        width, url, media_type = max(suitable, key=lambda choice: choice[0])
+        title = parsed.descriptions[0] if parsed.descriptions else "Media of the day"
+        filename = html.unescape(parsed.video.get("data-mwtitle", ""))
+        page_url = ("https://commons.wikimedia.org/wiki/File:" + urllib.parse.quote(filename.replace(" ", "_"), safe="()_-'°")) if filename else ""
+        try:
+            duration = float(parsed.video.get("data-durationhint", 0) or 0)
+        except (TypeError, ValueError):
+            duration = 0
+        videos.append({"url": url, "type": media_type, "poster": wikimedia_thumbnail(parsed.video.get("poster"), 1920),
+                       "title": title, "description": title, "credit": "Wikimedia Commons contributors",
+                       "kicker": "Wikimedia media of the day", "published": entry.findtext("{http://www.w3.org/2005/Atom}updated"),
+                       "page_url": page_url, "width": width, "duration": duration})
+        if len(videos) == limit:
+            break
+    if not videos:
+        raise ValueError("Wikimedia media feed has no videos")
+    return videos
+
+
 def parse_nasa_iotd(raw, limit=5):
     """Newest NASA Images of the Day (one per weekday), resized by NASA's image service."""
     photos = []
@@ -452,9 +559,9 @@ def pick_nasa_archive(fetcher, day, count=5, attempts=20):
 
 
 def load_pictures(fetcher=None, now=None):
-    """Five newest NASA Images of the Day plus five random archive images for today."""
+    """NASA and Wikimedia daily pictures plus Wikimedia daily video."""
     fetcher = fetcher or fetch
-    photos = []
+    photos, videos = [], []
     try:
         photos += parse_nasa_iotd(fetcher(NASA_IOTD_URL))
     except Exception:
@@ -463,9 +570,17 @@ def load_pictures(fetcher=None, now=None):
         photos += pick_nasa_archive(fetcher, (now or datetime.now(timezone.utc)).date())
     except Exception:
         pass
-    if not photos:
-        raise ValueError("NASA pictures unavailable")
-    return {"photos": photos}
+    try:
+        photos += parse_wikimedia_potd(fetcher(WIKIMEDIA_POTD_URL))
+    except Exception:
+        pass
+    try:
+        videos += parse_wikimedia_motd(fetcher(WIKIMEDIA_MOTD_URL))
+    except Exception:
+        pass
+    if not photos and not videos:
+        raise ValueError("Daily pictures and media unavailable")
+    return {"photos": photos, "videos": videos}
 
 
 def parse_screen_durations(value):
