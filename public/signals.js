@@ -1,11 +1,10 @@
 (function (root) {
   'use strict';
 
-  // The variable weather slot always rotates wind with alerts and the next sky event.
-  const SUNRISE_LEAD = '04:30';
+  // The weather ticker: warnings first, then air quality, the next rise or set, wind, and the moon.
   const UV_THRESHOLD = 6;
   const AQI_THRESHOLD = 101;
-  const ROTATE_MS = 7000;
+  const ROTATE_MS = 4000;
 
   function localTime(stamp, offsetSeconds) {
     // Open-Meteo daily times are local wall-clock strings such as 2026-10-14T07:10.
@@ -21,33 +20,24 @@
     return `in ${hours} hr${minutes % 60 ? ` ${minutes % 60} min` : ''}`;
   }
 
-  function moonPhase(now, moon) {
-    const phase = moon.info(new Date(now));
-    return { kind: 'moon', icon: `moon-${phase.key}`, title: phase.name,
-      detail: `${phase.illumination}% illuminated`, label: `Moon: ${phase.name}, ${phase.illumination}% illuminated` };
-  }
-
-  function astronomy(now, weather, place, moon) {
+  // The next sunrise, sunset, or moonrise, whichever comes first; always present when data allows.
+  function nextSkyEvent(now, weather, place, moon) {
     const daily = weather.daily || {};
     const offset = weather.utc_offset_seconds;
-    const days = (daily.time || []).map((day, i) => ({
-      dawn: localTime(`${day}T${SUNRISE_LEAD}`, offset),
-      sunrise: localTime(daily.sunrise?.[i], offset),
-      sunset: localTime(daily.sunset?.[i], offset),
-    })).filter((day) => day.dawn !== null && day.sunrise !== null && day.sunset !== null);
-    const sunrise = days.find((day) => day.sunrise > now);
-    const sunset = days.find((day) => day.sunset > now);
-    if (!sunrise || !sunset) return moonPhase(now, moon);
-    const event = (kind, time, title) => ({ kind, icon: kind, title, time, detail: duration(time - now),
-      label: `${title} ${duration(time - now)}` });
-    // The sun is up: the next sunset arrives before the next sunrise.
-    if (sunset.sunset < sunrise.sunrise) return event('sunset', sunset.sunset, 'Sunset');
-    if (now >= sunrise.dawn) return event('sunrise', sunrise.sunrise, 'Sunrise');
-    // Night: announce tonight's moonrise until it passes, then the phase.
-    const rise = Number.isFinite(place?.latitude) && Number.isFinite(place?.longitude)
-      ? moon.nextRise(new Date(now), place.latitude, place.longitude, 24) : null;
-    if (rise && rise.valueOf() < sunrise.dawn) return event('moonrise', rise.valueOf(), 'Moonrise');
-    return moonPhase(now, moon);
+    const events = [];
+    (daily.time || []).forEach((_, i) => {
+      events.push({ kind: 'sunrise', title: 'Sunrise', time: localTime(daily.sunrise?.[i], offset) });
+      events.push({ kind: 'sunset', title: 'Sunset', time: localTime(daily.sunset?.[i], offset) });
+    });
+    if (Number.isFinite(place?.latitude) && Number.isFinite(place?.longitude)) {
+      const rise = moon.nextRise(new Date(now), place.latitude, place.longitude, 36);
+      if (rise) events.push({ kind: 'moonrise', title: 'Moonrise', time: rise.valueOf() });
+    }
+    const next = events.filter((event) => Number.isFinite(event.time) && event.time > now)
+      .sort((a, b) => a.time - b.time)[0];
+    if (!next) return null;
+    const detail = duration(next.time - now);
+    return { ...next, icon: next.kind, detail, label: `${next.title} ${detail}` };
   }
 
   function alertIcon(event) {
@@ -98,7 +88,7 @@
     }
     const aqi = weather.air_quality?.us_aqi;
     if (Number.isFinite(aqi) && aqi >= AQI_THRESHOLD && !list.some((item) => item.icon === 'smoke')) {
-      list.push({ kind: 'alert', icon: 'smoke', title: `Air quality ${aqi}`, detail: aqiCategory(aqi),
+      list.push({ kind: 'alert', source: 'aqi', icon: 'smoke', title: `Air quality ${aqi}`, detail: aqiCategory(aqi),
         severity: aqi > 150 ? 'Severe' : 'Moderate', label: `Air quality index ${aqi}, ${aqiCategory(aqi)}` });
     }
     const level = Math.round(weather.current?.uv_index);
@@ -109,33 +99,84 @@
     return list;
   }
 
+  const DIRECTION_NAMES = { n: 'North', ne: 'Northeast', e: 'East', se: 'Southeast',
+    s: 'South', sw: 'Southwest', w: 'West', nw: 'Northwest' };
+
+  function clock(time, timeZone) {
+    try {
+      return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(time));
+    } catch { return ''; }
+  }
+
   function wind(weather, weatherVisual, seed = '') {
     const speed = weather.current?.wind_speed_10m;
     if (!Number.isFinite(speed) || !weatherVisual) return null;
     const direction = weatherVisual.windDirection(weather.current?.wind_direction_10m);
-    const directionNames = { n: 'north', ne: 'northeast', e: 'east', se: 'southeast',
-      s: 'south', sw: 'southwest', w: 'west', nw: 'northwest' };
     const rounded = Math.round(speed);
-    const detail = direction ? directionNames[direction][0].toUpperCase() + directionNames[direction].slice(1)
-      : speed < 12 ? 'Light wind' : speed < 25 ? 'Moderate wind' : 'Strong wind';
-    const icons = [weatherVisual.windStrengthIcon(speed, seed)];
-    if (direction) icons.push(`wind-direction-${direction}`);
-    return { kind: 'wind', icon: icons[0], icons, title: `Wind · ${rounded} mph`, detail,
-      label: `Wind ${rounded} miles per hour${direction ? ` from ${directionNames[direction]}` : ''}` };
+    const name = direction ? DIRECTION_NAMES[direction] : speed < 12 ? 'Light' : speed < 25 ? 'Moderate' : 'Strong';
+    const strength = weatherVisual.windStrengthIcon(speed, seed);
+    // Direction leads; the strength icon follows the text (it leads instead when direction is unknown).
+    return { kind: 'wind', icon: direction ? `wind-direction-${direction}` : strength, trail: direction ? strength : '',
+      kicker: 'Wind', title: `${rounded} mph · ${name}`,
+      label: `Wind ${rounded} miles per hour${direction ? ` from the ${name.toLowerCase()}` : ''}` };
   }
 
-  // Everything the slot should cycle through right now; always includes astronomy.
-  function items(now, weather, place, moon, timeZone, weatherVisual, seed = '') {
-    const active = alerts(now, weather, timeZone);
-    return [wind(weather, weatherVisual, seed), ...active, astronomy(now, weather, place, moon)].filter(Boolean);
+  function airQuality(weather) {
+    const aqi = weather.air_quality?.us_aqi;
+    if (!Number.isFinite(aqi)) return null;
+    const category = aqiCategory(aqi);
+    // Meteocons' alert-level colors follow the EPA AQI bands.
+    const icon = aqi > 300 ? 'code-black' : aqi > 200 ? 'code-purple' : aqi > 150 ? 'code-red'
+      : aqi > 100 ? 'code-orange' : aqi > 50 ? 'code-yellow' : 'code-green';
+    return { kind: 'air', icon, kicker: 'Air quality', title: `AQI ${aqi} · ${category}`,
+      severity: aqi > 150 ? 'Severe' : aqi > 100 ? 'Moderate' : undefined, label: `Air quality index ${aqi}, ${category}` };
+  }
+
+  function localDate(time, timeZone) {
+    try { return new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date(time)); } catch { return ''; }
+  }
+
+  function moonItem(now, place, moon, timeZone, showRise) {
+    const phase = moon.info(new Date(now));
+    let sub = '';
+    if (showRise && Number.isFinite(place?.latitude) && Number.isFinite(place?.longitude)) {
+      if (moon.altitude(new Date(now), place.latitude, place.longitude) > 0) sub = 'Up now';
+      else {
+        const rise = moon.nextRise(new Date(now), place.latitude, place.longitude, 30);
+        const tomorrow = rise && localDate(rise, timeZone) !== localDate(now, timeZone);
+        if (rise) sub = `Rises ${tomorrow ? 'tomorrow ' : ''}${clock(rise, timeZone)}`;
+      }
+    }
+    return { kind: 'moon', icon: `moon-${phase.key}`, kicker: 'Moon', title: `${phase.name} · ${phase.illumination}%`, sub,
+      label: `Moon: ${phase.name}, ${phase.illumination}% illuminated${sub ? `, ${sub.toLowerCase()}` : ''}` };
+  }
+
+  function warning(item) {
+    if (item.icon.startsWith('uv-index')) {
+      return { ...item, kicker: 'UV index', title: `${item.title.replace('UV index ', '')} · ${item.detail}`, sub: '' };
+    }
+    return { ...item, kicker: 'Alert · NWS', sub: item.detail };
+  }
+
+  // Ticker order: active warnings, air quality, the sky event ahead of us, wind, moon phase.
+  function tickerItems(now, weather, place, moon, timeZone, weatherVisual, seed = '') {
+    // Air quality has its own always-on item, so its threshold alert is not repeated.
+    const warnings = alerts(now, weather, timeZone).filter((item) => item.source !== 'aqi').map(warning);
+    const sky = nextSkyEvent(now, weather, place, moon);
+    const tomorrow = sky && localDate(sky.time, timeZone) !== localDate(now, timeZone);
+    const event = sky && { kind: sky.kind, icon: sky.icon, kicker: sky.kind === 'moonrise' ? 'Moon' : 'Sun',
+      title: `${sky.title} ${tomorrow ? 'tomorrow ' : ''}${clock(sky.time, timeZone)}`, sub: sky.detail, label: sky.label };
+    // The moon item names its next rise unless the sky item is already that moonrise.
+    return [...warnings, airQuality(weather), event, wind(weather, weatherVisual, seed),
+      moonItem(now, place, moon, timeZone, sky?.kind !== 'moonrise')].filter(Boolean);
   }
 
   function key(item) {
-    return `${item.icon}|${item.title}|${item.detail}`;
+    return `${item.kind}|${item.icon}|${item.title}`;
   }
 
-  const api = { SUNRISE_LEAD, UV_THRESHOLD, AQI_THRESHOLD, ROTATE_MS, localTime, duration, astronomy,
-    alertIcon, alerts, wind, items, key };
+  const api = { UV_THRESHOLD, AQI_THRESHOLD, ROTATE_MS, localTime, duration, nextSkyEvent,
+    alertIcon, alerts, wind, airQuality, tickerItems, key };
   if (typeof module !== 'undefined') module.exports = api;
   else root.WeatherSignals = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

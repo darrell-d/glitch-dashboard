@@ -40,6 +40,7 @@ class Element {
 
 async function app(hash = '', { storyCount = 3, weather = null, settings = null, pictures = null, media = null } = {}) {
   const posts = [];
+  const stored = {};
   const markup = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
   const elements = Object.fromEntries([...markup.matchAll(/id="([^"]+)"/g)].map((match) => [match[1], new Element()]));
   const extras = { '.footer': new Element(), '.paper-story': new Element() };
@@ -61,9 +62,9 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
   };
   const context = vm.createContext({ document, location, DashboardEdition, WeatherVisual, MoonPhase, WeatherSignals, RadarMap,
     window: { addEventListener() {} }, history: { replaceState: (_, __, hash) => { location.hash = hash; } },
-    localStorage: { getItem: () => null, setItem() {} }, performance: { now: () => now },
+    localStorage: { getItem: () => null, setItem: (key, value) => { stored[key] = value; } }, performance: { now: () => now },
     getComputedStyle: () => ({ fontSize: '32px' }), requestAnimationFrame: (callback) => frames.push(callback),
-    setInterval() {}, setTimeout(callback, delay) { if (delay === 800) transitionTimers.push(callback); }, clearTimeout() {}, AbortController, Image: class { },
+    setInterval() {}, setTimeout(callback, delay) { if (delay === 750) transitionTimers.push(callback); }, clearTimeout() {}, AbortController, Image: class { },
     fetch: async (url, init = {}) => ({ ok: true, json: async () => {
       if (url === '/api/settings' && init.method === 'POST') { posts.push(JSON.parse(init.body)); return JSON.parse(init.body); }
       if (url === '/api/settings' && settings) return settings;
@@ -81,7 +82,7 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/app.js'), 'utf8'), context);
   await new Promise(setImmediate);
-  return { elements, extras, location, listeners, posts,
+  return { elements, extras, location, listeners, posts, stored,
     run: (code) => vm.runInContext(code, context), advance: (milliseconds) => { now += milliseconds; vm.runInContext('tick()', context); },
     frame: (milliseconds) => { now += milliseconds; const pending = frames.splice(0); pending.forEach((callback) => callback()); },
     finishTransitions: () => transitionTimers.splice(0).forEach((callback) => callback()) };
@@ -161,6 +162,18 @@ test('featured video owns rotation until playback ends', async () => {
   assert.equal(screen.elements.media.classList.contains('active'), false);
 });
 
+test('M toggles video sound and is remembered', async () => {
+  const screen = await app();
+  const video = screen.elements['media-video'];
+  screen.listeners.keydown({ key: 'm', target: { tagName: 'BODY' }, preventDefault() {} });
+  assert.equal(video.muted, false);
+  assert.match(screen.elements['media-sound'].textContent, /^Sound on/);
+  assert.equal(screen.stored['glitch-video-sound'], 'true');
+  screen.listeners.keydown({ key: 'M', target: { tagName: 'BODY' }, preventDefault() {} });
+  assert.equal(video.muted, true);
+  assert.match(screen.elements['media-sound'].textContent, /^Muted/);
+});
+
 test('direct story URL opens a photo page once feed data is available', async () => {
   const screen = await app('#article');
   assert.equal(screen.elements.article.classList.contains('active'), true);
@@ -185,23 +198,36 @@ test('weather renders night-aware central imagery and five forecast icons', asyn
     time: ['2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18'],
     temperature_2m_max: [70, 72, 68, 65, 66], temperature_2m_min: [50, 52, 48, 45, 46], weather_code: [0, 2, 3, 61, 95] } };
   const screen = await app('', { weather });
-  const [summary, hourly, forecast] = screen.elements['weather-content'].children;
-  assert.equal(summary.children[1].dataset.kind, 'moon');
-  assert.match(summary.children[1].innerHTML, /clear-night\.svg/);
-  assert.match(summary.children[1].attributes['aria-label'], /night/);
-  assert.equal(forecast.children.length, 5);
-  assert.ok(forecast.children.every((day) => day.children.some((child) => child.className === 'forecast-icon')));
-  const slot = summary.children[2].children[2];
-  assert.equal(slot.className, 'weather-signal');
-  assert.equal(slot.children.length, 1);
-  assert.equal(slot.children[0].className, 'signal-item');
-  assert.equal(hourly.children[1].children.length, 12);
-  assert.equal(hourly.children[1].children[0].children[0].textContent, 'NOW');
-  assert.match(hourly.children[1].children[5].attributes['aria-label'], /35% chance of precipitation/);
-  assert.equal(slot.children[0].dataset.kind, 'wind');
-  assert.match(slot.children[0].attributes['aria-label'], /9 miles per hour from southwest/);
-  assert.match(slot.children[0].children[0].children[0].innerHTML, /\/(windsock-calm|windsock-weak|wind-spinner|windmill)\.svg/);
-  assert.match(slot.children[0].children[0].children[1].innerHTML, /\/wind-direction-sw\.svg/);
+  const [tempRow, conditionLabel, stats] = screen.elements['weather-content'].children;
+  const hero = tempRow.children[1];
+  assert.equal(hero.dataset.kind, 'moon');
+  assert.match(hero.innerHTML, /clear-night\.svg/);
+  assert.match(hero.attributes['aria-label'], /night/);
+  assert.equal(String(tempRow.children[0].children[0].textContent), '68');
+  assert.equal(conditionLabel.textContent, 'Clear skies');
+  assert.deepEqual(stats.children.map((stat) => stat.children[0].textContent), ['Feels', 'Humidity', 'Celsius']);
+  const [chart, meta] = screen.elements['weather-hourly'].children;
+  assert.match(chart.innerHTML, /<polyline class="wx-chart-line"/);
+  assert.equal(meta.children.length, 12);
+  assert.equal(meta.children[0].children[1].textContent, 'NOW');
+  assert.match(meta.children[5].attributes['aria-label'], /35% chance of precipitation/);
+  // Warmest hour sits at the top of the chart (y=50), coldest at the bottom (y=160).
+  const labels = chart.children[0].children.map((column) => parseFloat(column.children[1].style.top));
+  assert.equal(labels[11], 50);
+  assert.equal(labels[0], 160);
+  const days = screen.elements['weather-days'].children;
+  assert.equal(days.length, 5);
+  assert.equal(days[0].children[0].textContent, 'Today');
+  // Bars share the week's scale: 45°→72°. Wednesday is 50°→70°.
+  const fill = days[0].children[4].children[0];
+  assert.equal(fill.style.left, `${(50 - 45) / 27 * 100}%`);
+  assert.equal(fill.style.width, `${(70 - 50) / 27 * 100}%`);
+  const rows = screen.elements['weather-ticker'].children;
+  const wind = rows.find((row) => row.dataset.kind === 'wind');
+  assert.match(wind.attributes['aria-label'], /9 miles per hour from the southwest/);
+  assert.match(wind.children[0].innerHTML, /\/wind-direction-sw\.svg/);
+  assert.equal(wind.children[2].className, 'wx-icon wx-ticker-trail');
+  assert.match(wind.children[2].innerHTML, /\/(windsock-calm|windsock-weak|wind-spinner|windmill)\.svg/);
 });
 
 test('weather icon style can be fixed in settings', async () => {
@@ -217,12 +243,13 @@ test('weather icon style can be fixed in settings', async () => {
   screen.elements['weather-icon-color'].value = '#c6f294';
   screen.elements['settings-dialog'].returnValue = 'save';
   await screen.elements['settings-dialog'].listeners.close();
-  assert.match(screen.elements['weather-content'].children[0].children[1].innerHTML,
-    /\/meteocons\/monochrome\/clear-day\.svg/);
-  assert.match(screen.elements['weather-content'].children[0].children[1].innerHTML, /color:#c6f294/);
+  const hero = screen.elements['weather-content'].children[0].children[1];
+  assert.match(hero.innerHTML, /\/meteocons\/monochrome\/clear-day\.svg/);
+  assert.match(hero.innerHTML, /color:#c6f294/);
+  assert.match(screen.elements['weather-days'].children[0].children[1].innerHTML, /\/meteocons\/monochrome\//);
 });
 
-test('weather signal transition removes only the outgoing slide', async () => {
+test('weather ticker shows air quality, wind, and the moon, slides up, and wraps seamlessly', async () => {
   const weather = { current: { temperature_2m: 68, apparent_temperature: 68, weather_code: 0,
     is_day: 0, relative_humidity_2m: 85, wind_speed_10m: 9, wind_direction_10m: 225 }, hourly: {
     time: Array.from({ length: 12 }, (_, i) => `2026-10-14T${String(i + 10).padStart(2, '0')}:00`),
@@ -230,18 +257,22 @@ test('weather signal transition removes only the outgoing slide', async () => {
     precipitation_probability: Array(12).fill(0), is_day: Array(12).fill(0) }, daily: {
     time: ['2026-10-14', '2026-10-15'], sunrise: ['2026-10-14T07:10', '2026-10-15T07:11'],
     sunset: ['2026-10-14T18:22', '2026-10-15T18:21'], temperature_2m_max: [70, 72],
-    temperature_2m_min: [50, 52], weather_code: [0, 2] }, utc_offset_seconds: -14400 };
+    temperature_2m_min: [50, 52], weather_code: [0, 2] }, utc_offset_seconds: -14400, air_quality: { us_aqi: 32 } };
   const screen = await app('', { weather });
-  const slot = screen.elements['weather-content'].children[0].children[2].children[2];
-  const outgoing = slot.children[0];
-  screen.run('signalSlot.shownAt = Date.now() - WeatherSignals.ROTATE_MS; updateWeatherSignal()');
-  assert.equal(slot.children.length, 2);
-  const incoming = slot.children[1];
-  assert.equal(incoming.classList.contains('entering'), true);
+  const track = screen.elements['weather-ticker'];
+  const kinds = screen.run('ticker.items.map((item) => item.kind)');
+  assert.ok(['air', 'wind', 'moon'].every((kind) => kinds.includes(kind)), kinds.join());
+  assert.equal(track.children.length, kinds.length + 1, 'a copy of the first row follows the last');
+  assert.equal(screen.elements['weather-ticker-dots'].children.length, kinds.length);
+  assert.equal(track.style.transform, 'translateY(0px)');
+  screen.run('ticker.shownAt = 0; updateTicker()');
+  assert.equal(track.style.transform, 'translateY(-60px)');
+  assert.equal(screen.elements['weather-ticker-dots'].children[1].attributes['aria-current'], 'true');
+  screen.run(`ticker.index = ${kinds.length - 1}; ticker.shownAt = 0; updateTicker()`);
+  assert.equal(track.style.transform, `translateY(${-60 * kinds.length}px)`);
   screen.finishTransitions();
-  assert.deepEqual(slot.children, [incoming]);
-  assert.equal(incoming.classList.contains('entering'), false);
-  assert.equal(outgoing.parentElement, null);
+  assert.equal(track.style.transform, 'translateY(0px)');
+  assert.equal(track.classList.contains('instant'), true);
 });
 
 test('display markup has no app header, story count, article link, or quote collection link', () => {

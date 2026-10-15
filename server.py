@@ -429,8 +429,11 @@ def featured_summary(value):
     return parser
 
 
-def wikimedia_thumbnail(url, width=2048):
-    """Ask Commons' thumbnail service for a display-sized image while retaining its safe host."""
+def wikimedia_thumbnail(url, width=1920):
+    """Ask Commons' thumbnail service for a display-sized image while retaining its safe host.
+
+    The service only renders standard widths (e.g. 1280, 1920, 3840); others such as 2048 get HTTP 400.
+    """
     url = html.unescape(url or "")
     if not url.startswith("https://thumb.wikimedia.org/"):
         return ""
@@ -447,8 +450,10 @@ def parse_wikimedia_potd(raw, limit=5):
         url = wikimedia_thumbnail(image.get("src"))
         if not url:
             continue
+        # The feed's own thumbnail always exists; use it if the picture is narrower than 1920px.
+        fallback = html.unescape(image.get("src") or "")
         description = parsed.descriptions[0] if parsed.descriptions else "Featured picture from Wikimedia Commons."
-        photos.append({"url": url, "title": "Picture of the day", "description": description,
+        photos.append({"url": url, "fallback_url": fallback, "title": "Picture of the day", "description": description,
                        "credit": "Wikimedia Commons contributors", "kicker": "Wikimedia Commons",
                        "published": entry.findtext("{http://www.w3.org/2005/Atom}updated"),
                        "page_url": parsed.file_url})
@@ -457,6 +462,17 @@ def parse_wikimedia_potd(raw, limit=5):
     if not photos:
         raise ValueError("Wikimedia picture feed has no images")
     return photos
+
+
+def browser_playable(media_type):
+    """Chrome plays WebM (VP8/VP9/AV1) and MP4 (H.264/AV1/VP9); it dropped Ogg Theora and has no MPEG-4 Part 2."""
+    kind, _, params = media_type.partition(";")
+    kind, codecs = kind.strip().lower(), params.lower()
+    if kind == "video/webm":
+        return "theora" not in codecs
+    if kind == "video/mp4":
+        return not codecs or any(codec in codecs for codec in ("avc1", "h264", "av01", "vp09", "vp9"))
+    return False
 
 
 def parse_wikimedia_motd(raw, limit=3):
@@ -468,12 +484,13 @@ def parse_wikimedia_motd(raw, limit=3):
         choices = []
         for source in parsed.sources:
             url = html.unescape(source.get("src", ""))
-            media_type = source.get("type", "").split(";", 1)[0]
+            full_type = source.get("type", "")
+            media_type = full_type.split(";", 1)[0]
             try:
                 width = int(source.get("data-width", 0))
             except (TypeError, ValueError):
                 width = 0
-            if url.startswith("https://upload.wikimedia.org/") and media_type.startswith("video/"):
+            if url.startswith("https://upload.wikimedia.org/") and browser_playable(full_type):
                 choices.append((width, url, media_type))
         if not choices:
             continue
@@ -714,7 +731,9 @@ class Handler(SimpleHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--host", default="127.0.0.1")
+    # Listen on every interface so other devices on the home network can open the dashboard;
+    # pass --host 127.0.0.1 to keep it on this machine only.
+    parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
     try:

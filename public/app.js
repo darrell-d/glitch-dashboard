@@ -143,127 +143,188 @@ function fitArticle() {
   }
 }
 
+// The weather screen is designed on a 1440×900 canvas; scale it to cover the viewport and
+// let the forecast column absorb any extra width.
+const WEATHER_DESIGN = { width: 1440, height: 900, leftColumn: 660, rightPadding: 128 };
+function fitWeather() {
+  const width = window.innerWidth || 1920;
+  const height = window.innerHeight || 1080;
+  const scale = Math.min(width / WEATHER_DESIGN.width, height / WEATHER_DESIGN.height);
+  const canvas = $('weather-canvas');
+  canvas.style.width = `${width / scale}px`;
+  canvas.style.height = `${height / scale}px`;
+  canvas.style.transform = `scale(${scale})`;
+  return width / scale;
+}
+function weatherIcon(className, html) {
+  const icon = node('span', `wx-icon ${className}`.trim());
+  icon.setAttribute('aria-hidden', 'true');
+  icon.innerHTML = html;
+  return icon;
+}
 function renderWeather(data) {
   const { current: now, hourly, daily } = data;
   const iconStyle = WeatherVisual.resolveStyle(options.weatherIconStyle);
+  const icon = (code, isDay) => WeatherVisual.icon(code, isDay, iconStyle, options.weatherIconColor);
+  const canvasWidth = fitWeather();
   $('weather-heading').textContent = config.location;
-  const content = $('weather-content');
-  const summary = node('div', 'weather-now');
-  const temperatures = node('div');
-  const temperature = node('div', 'temperature', number(now.temperature_2m));
-  temperature.append(node('small', '', '°F'));
-  temperatures.append(temperature, node('div', 'celsius', `${celsius(now.temperature_2m)}°C`));
+
+  // Now: big temperature with the condition icon, condition, and three stats.
   const hour = Number(new Intl.DateTimeFormat('en-US', { hour: 'numeric', hourCycle: 'h23', timeZone: config.timezone }).format(new Date()));
   const isDay = now.is_day === 0 ? false : now.is_day === 1 ? true : hour >= 7 && hour < 19;
-  const illustration = node('div', 'weather-art');
-  illustration.dataset.kind = WeatherVisual.appearance(now.weather_code, isDay);
-  illustration.setAttribute('role', 'img');
-  illustration.setAttribute('aria-label', `${condition(now.weather_code)}${isDay ? '' : ' at night'}`);
-  illustration.innerHTML = WeatherVisual.icon(now.weather_code, isDay, iconStyle, options.weatherIconColor);
-  const conditions = node('div', 'conditions');
-  conditions.append(node('p', 'condition-label', condition(now.weather_code)));
-  const details = node('div', 'weather-detail');
-  details.append(node('div', '', `Feels like ${number(now.apparent_temperature)}°F / ${celsius(now.apparent_temperature)}°C`));
-  details.append(node('div', '', `Humidity ${number(now.relative_humidity_2m)}%`));
-  const signal = node('div', 'weather-signal');
-  signal.setAttribute('aria-live', 'polite');
-  conditions.append(details, signal);
-  summary.append(temperatures, illustration, conditions);
-  const hourlySection = node('section', 'hourly-section');
-  hourlySection.setAttribute('aria-label', 'Next 12 hours');
-  hourlySection.append(node('div', 'hourly-label', 'NEXT 12 HOURS'));
-  const hourlyForecast = node('div', 'hourly-forecast');
-  hourly.time.slice(0, 12).forEach((stamp, i) => {
-    const code = hourly.weather_code[i];
-    const rain = number(hourly.precipitation_probability[i]);
-    const hour = node('div', 'hourly-hour');
-    hour.setAttribute('aria-label', `${displayHour(stamp, i)}: ${condition(code)}, ${number(hourly.temperature_2m[i])}°F, ${rain}% chance of precipitation`);
-    const icon = node('div', 'hourly-icon');
-    icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = WeatherVisual.icon(code, hourly.is_day[i] !== 0, iconStyle, options.weatherIconColor);
-    const rainChance = node('div', 'hourly-rain', `${rain}%`);
-    if (rain >= 30) rainChance.dataset.wet = 'true';
-    hour.append(node('div', 'hourly-time', displayHour(stamp, i)), icon,
-      node('div', 'hourly-temp', `${number(hourly.temperature_2m[i])}°`), rainChance);
-    hourlyForecast.append(hour);
+  const temperature = node('div', 'wx-temp');
+  const reading = String(number(now.temperature_2m));
+  // Three-character readings (100°+, -10° and below) step the numeral down so the icon keeps room.
+  if (reading.length >= 3) temperature.dataset.wide = 'true';
+  temperature.append(node('span', 'wx-temp-num', reading), node('span', 'wx-temp-unit', '°F'));
+  const hero = weatherIcon('wx-hero', icon(now.weather_code, isDay));
+  hero.dataset.kind = WeatherVisual.appearance(now.weather_code, isDay);
+  hero.setAttribute('role', 'img');
+  hero.removeAttribute('aria-hidden');
+  hero.setAttribute('aria-label', `${condition(now.weather_code)}${isDay ? '' : ' at night'}`);
+  const tempRow = node('div', 'wx-temp-row');
+  tempRow.append(temperature, hero);
+  const stats = node('div', 'wx-stats');
+  for (const [label, value] of [['Feels', `${number(now.apparent_temperature)}°`],
+    ['Humidity', `${number(now.relative_humidity_2m)}%`], ['Celsius', `${celsius(now.temperature_2m)}°`]]) {
+    const stat = node('div', 'wx-stat');
+    stat.append(node('span', 'wx-stat-label', label), node('span', 'wx-stat-value', value));
+    stats.append(stat);
+  }
+  $('weather-content').replaceChildren(tempRow, node('div', 'wx-condition', condition(now.weather_code)), stats);
+
+  // Next 12 hours: warmest hour at the top of the chart, coldest at the bottom.
+  const hours = hourly.time.slice(0, 12).map((stamp, i) => ({ label: displayHour(stamp, i),
+    temp: number(hourly.temperature_2m[i]), rain: number(hourly.precipitation_probability[i]),
+    code: hourly.weather_code[i], day: hourly.is_day[i] !== 0 }));
+  const chartWidth = Math.max(400, canvasWidth - WEATHER_DESIGN.leftColumn - WEATHER_DESIGN.rightPadding);
+  const chartHeight = 190;
+  const temps = hours.map((item) => item.temp);
+  const high = Math.max(...temps);
+  const low = Math.min(...temps);
+  const points = hours.map((item, i) => ({ x: (i + 0.5) * chartWidth / hours.length,
+    y: 50 + 110 * (high === low ? 0.5 : (high - item.temp) / (high - low)) }));
+  const line = points.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
+  const chart = node('div', 'wx-chart');
+  chart.setAttribute('role', 'img');
+  chart.setAttribute('aria-label', `Next 12 hours: ${hours.map((item) => `${item.label} ${item.temp}°`).join(', ')}`);
+  chart.innerHTML = `<svg width="${chartWidth}" height="${chartHeight}" viewBox="0 0 ${chartWidth} ${chartHeight}" aria-hidden="true">
+    <defs><linearGradient id="wx-chart-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e9e6d8" stop-opacity=".16"/><stop offset="1" stop-color="#e9e6d8" stop-opacity="0"/></linearGradient></defs>
+    <polygon fill="url(#wx-chart-fill)" points="${points[0].x.toFixed(1)},${chartHeight} ${line} ${points.at(-1).x.toFixed(1)},${chartHeight}"/>
+    <polyline class="wx-chart-line" points="${line}"/></svg>`;
+  const columns = node('div', 'wx-chart-cols');
+  hours.forEach((item, i) => {
+    const column = node('div', 'wx-chart-col');
+    const label = node('div', 'wx-chart-temp', `${item.temp}°`);
+    label.style.top = `${points[i].y - 34}px`;
+    const dot = node('div', 'wx-chart-dot');
+    dot.style.top = `${points[i].y}px`;
+    column.append(label, dot);
+    columns.append(column);
   });
-  hourlySection.append(hourlyForecast);
-  const forecast = node('div', 'forecast');
-  daily.time.forEach((day, i) => {
-    const column = node('div', 'forecast-day');
-    const dayName = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${day}T12:00:00Z`));
-    column.append(node('div', 'forecast-name', i === 0 ? 'TODAY' : dayName.toUpperCase()));
-    const icon = node('div', 'forecast-icon');
-    icon.setAttribute('aria-hidden', 'true');
-    icon.innerHTML = WeatherVisual.icon(daily.weather_code[i], true, iconStyle, options.weatherIconColor);
-    column.append(icon);
-    const high = node('div', 'forecast-temp', `${number(daily.temperature_2m_max[i])}°`);
-    high.append(node('span', '', ` / ${number(daily.temperature_2m_min[i])}°F`));
-    column.append(high,
-      node('div', 'forecast-celsius', `${celsius(daily.temperature_2m_max[i])}° / ${celsius(daily.temperature_2m_min[i])}°C`),
-      node('div', 'forecast-condition', condition(daily.weather_code[i])));
-    forecast.append(column);
+  chart.append(columns);
+  const meta = node('div', 'wx-hour-meta');
+  hours.forEach((item) => {
+    const cell = node('div', 'wx-hour');
+    cell.setAttribute('aria-label', `${item.label}: ${condition(item.code)}, ${item.temp}°F, ${item.rain}% chance of precipitation`);
+    const rain = node('span', 'wx-hour-pop', `${item.rain}%`);
+    if (item.rain >= 30) rain.dataset.wet = 'true';
+    cell.append(weatherIcon('', icon(item.code, item.day)), node('span', 'wx-hour-label', item.label), rain);
+    meta.append(cell);
   });
-  content.replaceChildren(summary, hourlySection, forecast);
-  signalSlot = { ...signalSlot, element: signal, data, current: null, iconStyle };
-  updateWeatherSignal();
-  WeatherVisual.hydrate(content);
+  $('weather-hourly').replaceChildren(chart, meta);
+
+  // Five days: every bar shares one scale, from the week's coldest low to its hottest high.
+  const weekLow = Math.min(...daily.temperature_2m_min.map(number));
+  const weekHigh = Math.max(...daily.temperature_2m_max.map(number));
+  const span = Math.max(1, weekHigh - weekLow);
+  $('weather-days').replaceChildren(...daily.time.map((day, i) => {
+    const dayHigh = number(daily.temperature_2m_max[i]);
+    const dayLow = number(daily.temperature_2m_min[i]);
+    const name = i === 0 ? 'Today' : new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: 'UTC' }).format(new Date(`${day}T12:00:00Z`));
+    const row = node('div', 'wx-day');
+    const range = node('div', 'wx-range');
+    range.setAttribute('role', 'img');
+    range.setAttribute('aria-label', `${name}: low ${dayLow}°, high ${dayHigh}° (week ${weekLow}°–${weekHigh}°)`);
+    const fill = node('div', 'wx-range-fill');
+    fill.style.left = `${(dayLow - weekLow) / span * 100}%`;
+    fill.style.width = `${(dayHigh - dayLow) / span * 100}%`;
+    range.append(fill);
+    row.append(node('span', 'wx-day-name', name), weatherIcon('', icon(daily.weather_code[i], true)),
+      node('span', 'wx-day-cond', condition(daily.weather_code[i])), node('span', 'wx-day-lo', `${dayLow}°`),
+      range, node('span', 'wx-day-hi', `${dayHigh}°`));
+    return row;
+  }));
+
+  ticker = { ...ticker, data, iconStyle, ids: '' };
+  updateTicker();
+  WeatherVisual.hydrate($('weather'));
 }
 
-// The slot keeps its rotation position across the minute-by-minute weather re-render.
-let signalSlot = { id: '', shownAt: 0 };
-const signalId = (item) => `${item.icon}|${item.title}`;
-function signalItem(item) {
-  const element = node('div', 'signal-item');
-  element.dataset.kind = item.kind;
-  if (item.severity) element.dataset.severity = item.severity;
-  element.setAttribute('role', 'img');
-  element.setAttribute('aria-label', item.label);
-  const icons = node('span', 'signal-icons');
-  icons.setAttribute('aria-hidden', 'true');
-  for (const iconName of item.icons || [item.icon]) {
-    const icon = node('span', 'signal-icon');
-    icon.innerHTML = WeatherVisual.named(iconName, signalSlot.iconStyle, options.weatherIconColor);
-    icons.append(icon);
-  }
-  const text = node('div', 'signal-text');
-  text.append(node('div', 'signal-title', item.title), node('div', 'signal-detail', item.detail));
-  element.append(icons, text);
-  return element;
+// Ticker: a 60px window sliding up through warnings, air quality, the next sky event, wind, and
+// the moon. It keeps its place across the minute-by-minute weather re-render.
+const TICKER_ROW = 60;
+let ticker = { data: null, iconStyle: 'fill', ids: '', items: [], index: 0, shownAt: 0 };
+function tickerRow(item) {
+  const row = node('div', 'wx-ticker-item');
+  row.dataset.kind = item.kind;
+  if (item.severity) row.dataset.severity = item.severity;
+  row.setAttribute('aria-label', item.label);
+  const text = node('div', 'wx-ticker-text');
+  text.append(node('span', 'wx-ticker-kicker', item.kicker), node('span', 'wx-ticker-title', item.title));
+  if (item.sub) text.append(node('span', 'wx-ticker-sub', item.sub));
+  row.append(weatherIcon('wx-ticker-lead', WeatherVisual.named(item.icon, ticker.iconStyle, options.weatherIconColor)), text);
+  if (item.trail) row.append(weatherIcon('wx-ticker-trail', WeatherVisual.named(item.trail, ticker.iconStyle, options.weatherIconColor)));
+  return row;
 }
-function updateWeatherSignal() {
-  if (!signalSlot.element) return;
+function moveTicker(index, animate = true) {
+  const track = $('weather-ticker');
+  track.classList.toggle('instant', !animate);
+  track.style.transform = `translateY(${-index * TICKER_ROW}px)`;
+  ticker.index = index;
+  const current = index % Math.max(1, ticker.items.length);
+  [...$('weather-ticker-dots').children].forEach((dot, i) => dot.setAttribute('aria-current', String(i === current)));
+  // After sliding onto the copy of the first item, jump back to the real one without animation.
+  if (index === ticker.items.length && index > 0) setTimeout(() => { if (ticker.index === index) moveTicker(0, false); }, 750);
+}
+function updateTicker() {
+  if (!ticker.data) return;
   const now = Date.now();
   const localDay = new Intl.DateTimeFormat('en-US', { dateStyle: 'short', timeZone: config.timezone }).format(new Date(now));
-  const items = WeatherSignals.items(now, signalSlot.data, config, MoonPhase, config.timezone,
+  const items = WeatherSignals.tickerItems(now, ticker.data, config, MoonPhase, config.timezone,
     WeatherVisual, `${config.postal_code}:${localDay}`);
-  const found = items.findIndex((item) => signalId(item) === signalSlot.id);
-  const due = now - signalSlot.shownAt >= WeatherSignals.ROTATE_MS;
-  const index = found < 0 ? 0 : items.length > 1 && due ? (found + 1) % items.length : found;
-  const item = items[index];
-  if (signalSlot.current && index === found) {
-    // Same item: refresh countdown text such as "in 42 min" without animating.
-    const detail = signalSlot.current.children[1].children[1];
-    if (detail.textContent !== item.detail) detail.textContent = item.detail;
-    signalSlot.current.setAttribute('aria-label', item.label);
+  const ids = items.map(WeatherSignals.key).join('\n');
+  const currentKey = ticker.items.length ? WeatherSignals.key(ticker.items[ticker.index % ticker.items.length]) : '';
+  if (ids !== ticker.ids) {
+    // The set of items changed (or the screen re-rendered): rebuild, staying on the same item if it remains.
+    const keep = Math.max(0, items.findIndex((item) => WeatherSignals.key(item) === currentKey));
+    Object.assign(ticker, { ids, items });
+    const rows = items.map(tickerRow);
+    if (items.length > 1) rows.push(tickerRow(items[0]));
+    $('weather-ticker').replaceChildren(...rows);
+    $('weather-ticker-dots').replaceChildren(...items.map((item, i) => {
+      const dot = node('button', 'wx-ticker-dot');
+      dot.type = 'button';
+      dot.setAttribute('aria-label', `Show ${item.kicker}`);
+      dot.addEventListener('click', () => { ticker.shownAt = Date.now(); moveTicker(i); });
+      return dot;
+    }));
+    moveTicker(keep, false);
+    WeatherVisual.hydrate($('weather-ticker'));
     return;
   }
-  const incoming = signalItem(item);
-  const outgoing = signalSlot.current;
-  if (outgoing) {
-    outgoing.classList.add('leaving');
-    incoming.classList.add('entering');
-    signalSlot.element.append(incoming);
-    const container = signalSlot.element;
-    setTimeout(() => {
-      if (container !== signalSlot.element || incoming !== signalSlot.current) return;
-      outgoing.remove();
-      incoming.classList.remove('entering');
-    }, 800);
-  } else signalSlot.element.replaceChildren(incoming);
-  if (index !== found) signalSlot.shownAt = now;
-  Object.assign(signalSlot, { current: incoming, id: signalId(item) });
-  WeatherVisual.hydrate(incoming);
+  // Same items: refresh changing text such as "in 42 min" in place.
+  items.forEach((item, i) => {
+    for (const row of [i, i === 0 && items.length > 1 ? items.length : -1].map((r) => $('weather-ticker').children[r]).filter(Boolean)) {
+      const sub = row.children[1].children[2];
+      if (sub && sub.textContent !== item.sub) sub.textContent = item.sub;
+    }
+  });
+  ticker.items = items;
+  if (items.length > 1 && now - ticker.shownAt >= WeatherSignals.ROTATE_MS) {
+    ticker.shownAt = now;
+    moveTicker(ticker.index % items.length + 1);
+  }
 }
 
 let radarFrames = [];
@@ -430,13 +491,46 @@ function openPendingArticle() {
 }
 function renderPicture(photo) {
   const image = $('picture-image');
-  $('picture-backdrop').src = photo.url;
+  const backdrop = $('picture-backdrop');
+  // A larger rendition can be refused (e.g. a picture narrower than the requested width); fall back once.
+  image.onerror = () => {
+    image.onerror = null;
+    if (photo.fallback_url && image.src !== photo.fallback_url) image.src = backdrop.src = photo.fallback_url;
+  };
+  backdrop.src = photo.url;
   image.src = photo.url;
   image.alt = photo.title;
   $('picture-kicker').textContent = photo.kicker;
   $('picture-caption').textContent = photo.title;
   $('picture-description').textContent = photo.description;
   $('picture-credit').textContent = photo.credit ? `Image: ${photo.credit}` : '';
+}
+// Video sound: M toggles it; remembered on this browser. Browsers block audio until the viewer
+// interacts, so an unmuted start that is refused falls back to muted playback.
+let soundOn = readStored('glitch-video-sound') === true;
+function showSoundState(blocked = false) {
+  $('media-sound').textContent = soundOn && !blocked ? 'Sound on · press M to mute'
+    : blocked ? 'Muted until you interact · press M for sound' : 'Muted · press M for sound';
+}
+function startVideo(video) {
+  video.muted = !soundOn;
+  showSoundState();
+  const playback = video.play();
+  if (!playback?.catch) return;
+  playback.catch(() => {
+    if (video.muted) return; // The fallback timer advances if even muted autoplay is unavailable.
+    video.muted = true;
+    showSoundState(true);
+    video.play()?.catch?.(() => {});
+  });
+}
+function toggleSound() {
+  soundOn = !soundOn;
+  store('glitch-video-sound', soundOn);
+  const video = $('media-video');
+  video.muted = !soundOn;
+  showSoundState();
+  if (screens[current]?.panel === 'media' && video.paused) video.play()?.catch?.(() => {});
 }
 function renderMedia(item) {
   const video = $('media-video');
@@ -447,22 +541,18 @@ function renderMedia(item) {
   video.poster = item.poster || '';
   video.src = item.url;
   video.type = item.type || 'video/webm';
-  video.muted = true;
   $('media-kicker').textContent = item.kicker || 'Wikimedia media of the day';
   $('media-caption').textContent = item.title || '';
   $('media-credit').textContent = item.credit || '';
   const advance = () => {
     if (token === mediaToken && screens[current]?.panel === 'media') showPanel(current + 1);
   };
-  video.onended = advance;
-  video.onerror = advance;
+  // Pausing stops the rotation, not the video: while paused, a finished video replays instead of advancing.
+  video.onended = () => (paused ? video.play() : advance());
+  video.onerror = () => { if (!paused) advance(); };
   video.onplaying = () => clearTimeout(mediaFallbackTimer);
-  mediaFallbackTimer = setTimeout(advance, 15000);
-  if (paused) clearTimeout(mediaFallbackTimer);
-  else {
-    const playback = video.play();
-    if (playback?.catch) playback.catch(() => { /* The fallback advances if autoplay is unavailable. */ });
-  }
+  if (!paused) mediaFallbackTimer = setTimeout(advance, 15000);
+  startVideo(video);
 }
 async function refreshPictures() {
   try {
@@ -576,7 +666,9 @@ function tick() {
 function updateClock() {
   const now = new Date();
   try {
-    $('date').textContent = new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: config.timezone }).format(now);
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: config.timezone })
+      .formatToParts(now).map((part) => [part.type, part.value]));
+    $('date').textContent = `${parts.weekday} · ${parts.month} ${parts.day}`;
     $('clock').textContent = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone: config.timezone }).format(now);
     $('clock').dateTime = now.toISOString();
   } catch { $('clock').textContent = now.toLocaleTimeString(); }
@@ -674,8 +766,13 @@ document.addEventListener('keydown', (event) => {
   else if (event.code === 'Space' && !/BUTTON|A/.test(event.target.tagName)) { event.preventDefault(); setPaused(!paused); }
   else if (event.key.toLowerCase() === 'f') toggleFullscreen();
   else if (event.key.toLowerCase() === 's') $('settings').click();
+  else if (event.key.toLowerCase() === 'm') toggleSound();
 });
-window.addEventListener('resize', () => { fitQuote(); fitArticle(); if (records.radar?.data) renderRadar(records.radar.data); });
+window.addEventListener('resize', () => {
+  fitQuote(); fitArticle();
+  if (records.weather?.data) renderWeather(records.weather.data);
+  if (records.radar?.data) renderRadar(records.radar.data);
+});
 window.addEventListener('hashchange', () => {
   if (location.hash === '#article') {
     pendingArticle = true;
@@ -733,5 +830,5 @@ function animateProgress() {
 }
 requestAnimationFrame(animateProgress);
 setInterval(updateClock, 1000);
-setInterval(updateWeatherSignal, 1000);
+setInterval(updateTicker, 1000);
 init();

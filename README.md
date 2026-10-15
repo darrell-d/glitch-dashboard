@@ -24,7 +24,8 @@ code 19103. Changing the ZIP updates weather, clock timezone, and regional radar
 Controls appear when hovering over or focusing the footer, and on small screens.
 
 Keyboard: **← / →** switch panels, **Space** pauses/resumes, **F** toggles
-fullscreen, **S** opens settings. Fullscreen requires a user gesture; use the
+fullscreen, **S** opens settings, **M** turns video sound on or off (remembered on that browser;
+browsers keep video muted until you first click or press a key). Fullscreen requires a user gesture; use the
 browser's kiosk mode for automatic fullscreen on a dedicated display.
 
 ## Panels
@@ -42,20 +43,22 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   article links are omitted from the display. Only short descriptions are shown, with no invented
   article text or generated bullet summaries. Stories with missing or failed
   images use a text-focused layout.
-- **Weather:** Current conditions for the ZIP selected in Settings, Fahrenheit first with Celsius
-  alongside; feels-like temperature, a compact 12-hour forecast with rain chance,
-  and a five-day forecast in both units. A
-  large condition illustration fills the center, with day/night-aware sun/moon,
-  clouds, rain, fog, snow, or storms. Current, hourly, and daily conditions use
+- **Weather:** The "Felt" design: a two-column screen on a green felt ground. The left column
+  has the date and time, city, a large Fahrenheit temperature with a day/night-aware
+  condition icon, the condition, and Feels / Humidity / Celsius. The right column has a
+  12-hour temperature curve (relative: warmest hour at the top) with icons, hours, and rain
+  chance, and a five-day ledger whose bars place each day's low→high on the week's shared
+  range. The design is laid out at 1440×900 and scaled to fill any screen; wider screens
+  give the forecast column more room. Current, hourly, and daily conditions use
   Meteocons; Fill, Flat, Line, and Monochrome rotate weekly or can be fixed in
   Settings. The monochrome color is also configurable, with a light sage default
   chosen for the dark green display. The pinned SVG assets are served locally
   for display reliability.
-  A secondary slot beneath the conditions always rotates wind speed and direction,
-  active alerts (National Weather Service warnings such as heat, cold, fire, tornado,
-  and hurricane; US AQI above 100; UV index 6+), and what is next in the sky: sunrise
-  from 4:30 AM, sunset while the sun is up, then tonight's moonrise, then the moon phase.
-  Each item slides upward in turn. Moonrise and phase use
+  A framed ticker at the bottom left slides up through items every four seconds: active
+  warnings first (National Weather Service alerts such as heat, cold, fire, tornado, and
+  hurricane; UV index 6+), then air quality (always shown, with an EPA-colored level icon),
+  the next sunrise, sunset, or moonrise in time order (always), wind speed and direction (always),
+  and the moon phase with when it next rises (always). Moonrise and phase use
   a local astronomical calculation; sunrise and sunset come from Open-Meteo.
   Data and icon attribution is in Settings instead of on the weather screen.
 - **Regional radar:** A full-screen map centered on the selected ZIP, with four
@@ -208,13 +211,15 @@ Each browser can override that default in Settings. The ZIP is resolved through
 Open-Meteo to obtain the display name, coordinates, and timezone; the saved setting
 then drives the dashboard clock, forecast, and map center.
 
-For another device on a trusted LAN, run `python3 server.py --host 0.0.0.0` and
-open `http://<server-lan-ip>:8080` from that device. The display device only needs
+The server listens on all interfaces (`0.0.0.0`) by default, so other devices on the
+same network can open `http://<server-lan-ip>:8080`; use `--host 127.0.0.1` to keep it
+on this machine only. The display device only needs
 a modern browser; the Python server can run elsewhere. Chromecast compatibility
 depends on its browser/casting mode and has not been tested. A Pi with Chromium
 kiosk mode can display the same URL.
 
-This is a local/LAN server with no authentication or TLS. Public hosting needs
+This is a local/LAN server with no authentication or TLS: anyone on the network can view
+it and change the shared screen times in Settings. Public hosting needs
 a separate deployment decision and suitable HTTPS/authentication configuration.
 
 ## Docker
@@ -223,8 +228,8 @@ a separate deployment decision and suitable HTTPS/authentication configuration.
 docker compose up --build
 ```
 
-Compose binds localhost port 8080 by default. It accepts the same environment
-variables; intentionally change the port binding if LAN access is needed.
+Compose publishes port 8080 on all interfaces for LAN access. It accepts the same
+environment variables; change the binding to `127.0.0.1:8080:8080` to keep it local.
 
 ## Checks
 

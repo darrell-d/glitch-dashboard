@@ -285,7 +285,8 @@ class WikimediaMediaTests(unittest.TestCase):
           src="https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Bird.jpg/330px-Bird.jpg"></a>
           <div class="description en">A bird over the sea.</div></div>'''
         photo = parse_wikimedia_potd(self.atom(summary))[0]
-        self.assertIn("/2048px-Bird.jpg", photo["url"])
+        self.assertIn("/1920px-Bird.jpg", photo["url"])
+        self.assertTrue(photo["fallback_url"].startswith("https://thumb.wikimedia.org/"))
         self.assertEqual(photo["description"], "A bird over the sea.")
         self.assertEqual(photo["credit"], "Wikimedia Commons contributors")
 
@@ -298,6 +299,19 @@ class WikimediaMediaTests(unittest.TestCase):
         raw = f'<feed xmlns="http://www.w3.org/2005/Atom">{entry("06", "Old")}{entry("15", "New")}</feed>'
         photo = parse_wikimedia_potd(raw, limit=1)[0]
         self.assertEqual((photo["description"], photo["published"]), ("New", "2026-10-15T00:00:00Z"))
+
+    def test_media_of_the_day_skips_formats_chrome_cannot_play(self):
+        summary = '''<div><video poster="https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Fire.ogv/330px-Fire.ogv.jpg"
+          data-mwtitle="Fire.ogv"><source
+          src="https://upload.wikimedia.org/wikipedia/commons/transcoded/a/ab/Fire.ogv/Fire.ogv.480p.vp9.webm"
+          type='video/webm; codecs="vp9, opus"' data-width="854"><source
+          src="https://upload.wikimedia.org/wikipedia/commons/a/ab/Fire.ogv"
+          type='video/ogg; codecs="theora, vorbis"' data-width="1280"><source
+          src="https://upload.wikimedia.org/wikipedia/commons/transcoded/a/ab/Fire.ogv/Fire.ogv.360p.mpeg4.mov"
+          type='video/quicktime; codecs="mp4v"' data-width="640"></video><div class="description en">Fire roads.</div></div>'''
+        video = parse_wikimedia_motd(self.atom(summary))[0]
+        self.assertTrue(video["url"].endswith(".480p.vp9.webm"))
+        self.assertEqual(video["type"], "video/webm")
 
     def test_media_of_the_day_chooses_1080p_video(self):
         summary = '''<div><video poster="https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/Film.webm/330px-Film.webm.jpg"

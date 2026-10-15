@@ -42,17 +42,17 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   Monochrome rotate weekly unless Settings pins one style. Monochrome uses an
   adjustable saved color and must remain legible on the dark green background.
   No provider/Outside labels on the screen; attribution stays in Settings.
-- Weather has a secondary variable slot under the conditions, kept visually subordinate
-  to temperature and conditions. Wind is always one item in its upward-sliding carousel,
-  alongside active alerts (NWS, US AQI > 100, UV 6+) and the current astronomy item:
-  sunrise from 4:30 AM, sunset while the sun is up, tonight's moonrise, or the locally
-  calculated moon phase. Logic is in `public/signals.js`.
-  US pollen still lacks a provider.
-- Weather includes a compact next-12-hours strip with time, condition, Fahrenheit
-  temperature, and precipitation probability; keep the current reading dominant.
-- Current wind uses Meteocons for both strength and eight-point compass direction:
-  light winds rotate daily among calm/weak windsocks, wind spinner, and windmill;
-  moderate winds use the moderate windsock; high winds use windsock or wind.
+- Weather follows the "Felt" handoff (2b): a 1440×900 canvas scaled to fill the screen
+  (`fitWeather`; extra width goes to the forecast column), Barlow/Barlow Condensed, felt
+  texture, square corners, hairlines. Left: dateline, city, big temperature + hero icon,
+  condition, Feels/Humidity/Celsius, and a framed ticker. Right: next-12-hours relative
+  temperature curve (warmest at top) with icon/hour/rain chance, and five-day range bars on
+  one shared week scale. Keep the current reading dominant.
+- The ticker slides up every 4s (`WeatherSignals.tickerItems`): active warnings first (NWS,
+  UV 6+), then air quality (always; Meteocons code-* colors follow EPA bands), the next rise
+  or set (always: whichever of sunrise, sunset, or moonrise comes first; `nextSkyEvent`), wind
+  (always; `wind-direction-*` Meteocons, strength icons when direction is missing), and the
+  moon phase (always; up now or next rise). US pollen still lacks a provider.
 - Weather location is a browser-saved US ZIP code, defaulting to 19103. The server
   resolves it to coordinates and timezone; do not hardcode a city into display logic.
 - Regional radar uses four recent RainViewer frames over visible OpenStreetMap tiles,

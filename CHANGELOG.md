@@ -4,6 +4,17 @@
 
 ### Features
 
+- Listen on all interfaces (`0.0.0.0`) by default, including in Compose, so other devices
+  on the home network can open the dashboard; `--host 127.0.0.1` keeps it local.
+- The weather ticker always shows the next rise or set: whichever of sunrise, sunset, or
+  moonrise comes first, marked "tomorrow" when it falls on the next day.
+- Add **M** to toggle video sound on the media-of-the-day screen, remembered per browser,
+  with an on-screen sound label and a muted fallback when the browser blocks audio.
+- Redesign the weather screen to the "Felt" handoff: two columns on a felt ground, Barlow
+  type, a relative 12-hour temperature curve, five-day bars on a shared week scale, and a
+  framed ticker that always shows air quality, wind, and the moon, adds the next
+  sunrise/sunset/moonrise when ahead, and puts active warnings first. Meteocons and the
+  weekly style rotation (or Settings override) are unchanged.
 - Add St. Lucia Times, The Voice St. Lucia, and BBC News with four photo-backed
   stories per publisher and independent failure handling.
 - Add Wikimedia Commons pictures of the day to the full-screen picture pool and
