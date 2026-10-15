@@ -15,6 +15,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from functools import partial
 from html.parser import HTMLParser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -39,7 +40,14 @@ NASA_IOTD_URL = "https://www.nasa.gov/feeds/iotd-feed/"
 NASA_IMAGES_URL = "https://images-api.nasa.gov"
 WIKIMEDIA_POTD_URL = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=potd&feedformat=atom&language=en"
 WIKIMEDIA_MOTD_URL = "https://commons.wikimedia.org/w/api.php?action=featuredfeed&feed=motd&feedformat=atom&language=en"
-LOC_CARTOONS_URL = "https://www.loc.gov/collections/american-cartoon-prints/"
+GUARDIAN_CARTOONS_URL = "https://www.theguardian.com/tone/cartoons/rss"
+GUARDIAN_MEDIA = "{http://search.yahoo.com/mrss/}content"
+GUARDIAN_CREATOR = "{http://purl.org/dc/elements/1.1/}creator"
+POLITICAL_CARTOON_CATEGORIES = {
+    "australia news", "business", "china", "climate crisis", "economics", "environment",
+    "europe", "immigration and asylum", "middle east and north africa", "politics", "russia",
+    "uk news", "ukraine", "us news", "world news",
+}
 # Specific subjects keep random archive picks on striking imagery rather than launch-pad snapshots.
 NASA_ARCHIVE_TOPICS = ("nebula", "galaxy", "star cluster", "supernova", "planetary nebula", "Jupiter",
                        "Saturn", "Mars surface", "aurora", "Moon surface", "comet", "Earth at night")
@@ -465,44 +473,61 @@ def parse_wikimedia_potd(raw, limit=5):
     return photos
 
 
-def parse_loc_cartoons(raw, limit=12):
-    """Public-domain American political cartoons from the Library of Congress."""
+def guardian_cartoon_image(raw):
+    """Use the largest signed, uncropped rendition exposed by a Guardian cartoon page."""
+    markup = html.unescape(raw.decode("utf-8", "ignore") if isinstance(raw, bytes) else raw or "")
+    urls = re.findall(r'https://i\.guim\.co\.uk/img/media/[^"\s<>]+', markup)
+    uncropped = [url for url in urls if "fit=max" in url or "crop=none" in url]
+    def size(url):
+        query = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
+        return int(query.get("width", ["0"])[0]) * int(query.get("dpr", ["1"])[0])
+    return max(uncropped, key=size, default="")
+
+
+def parse_guardian_cartoons(raw, fetcher=None, now=None, limit=12):
+    """Current political cartoons published in The Guardian during the last seven days."""
+    fetcher = fetcher or fetch
+    cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=7)
     cartoons = []
-    for item in json.loads(raw).get("results", []):
-        choices = []
-        for candidate in item.get("image_url") or []:
-            url, _, fragment = candidate.partition("#")
-            if not url.startswith("https://tile.loc.gov/"):
-                continue
-            dimensions = re.search(r"h=(\d+)&w=(\d+)", fragment)
-            area = int(dimensions.group(1)) * int(dimensions.group(2)) if dimensions else 0
-            choices.append((area, url))
-        if not choices:
+    for item in ET.fromstring(raw).findall("./channel/item"):
+        try:
+            published = parsedate_to_datetime(item.findtext("pubDate") or "").astimezone(timezone.utc)
+        except (TypeError, ValueError):
             continue
-        title = plain(item.get("title"))
-        if not title:
+        categories = {plain(category.text).lower() for category in item.findall("category")}
+        if published < cutoff or not categories.intersection(POLITICAL_CARTOON_CATEGORIES):
             continue
-        descriptions = item.get("description") or []
-        description = description_text(descriptions[0] if isinstance(descriptions, list) and descriptions else descriptions)
-        year = str(item.get("date") or "")[:4]
-        cartoons.append({"url": max(choices)[1], "title": title,
-                         "description": description or "A historic American political print.",
-                         "credit": "Library of Congress · Public domain",
-                         "kicker": f"Political cartoon archive{f' · {year}' if year.isdigit() else ''}",
-                         "published": item.get("date") or "", "page_url": item.get("url") or item.get("id") or ""})
+        title = plain(item.findtext("title"))
+        # The feed also carries illustrated essays and multi-panel strips. Their hero image
+        # is only a teaser; keep this screen to complete single editorial cartoons.
+        if "cartoon" not in title.lower():
+            continue
+        link = item.findtext("link") or ""
+        if not link.startswith("https://www.theguardian.com/"):
+            continue
+        media = [node for node in item.findall(GUARDIAN_MEDIA)
+                 if (node.get("url") or "").startswith("https://i.guim.co.uk/")]
+        media.sort(key=lambda node: int(node.get("width", "0") or 0), reverse=True)
+        fallback = media[0].get("url") if media else ""
+        try:
+            image = guardian_cartoon_image(fetcher(link)) or fallback
+        except Exception:
+            image = fallback
+        if not image:
+            continue
+        creator = plain(item.findtext(GUARDIAN_CREATOR))
+        if creator:
+            title = re.sub(rf"\s+\|\s+{re.escape(creator)}$", "", title, flags=re.I)
+        cartoons.append({"url": image, "fallback_url": fallback, "title": title,
+                         "description": description_text(item.findtext("description")),
+                         "credit": f"{creator} · The Guardian" if creator else "The Guardian",
+                         "kicker": "Political cartoon · This week",
+                         "published": published.isoformat(), "page_url": link})
         if len(cartoons) == limit:
             break
     if not cartoons:
-        raise ValueError("Library of Congress cartoon collection has no images")
+        raise ValueError("No current political cartoons found")
     return cartoons
-
-
-def loc_cartoon_url(day):
-    # The filtered collection currently spans seven 25-item pages. Cycling the page daily
-    # keeps the unattended display varied without requesting the full catalog response.
-    page = random.Random(day.isoformat()).randint(1, 7)
-    return f"{LOC_CARTOONS_URL}?" + urllib.parse.urlencode(
-        {"fo": "json", "c": 25, "q": "cartoon", "sp": page, "at": "results"})
 
 
 def browser_playable(media_type):
@@ -642,7 +667,7 @@ def load_pictures(fetcher=None, now=None):
     except Exception:
         pass
     try:
-        cartoons += parse_loc_cartoons(fetcher(loc_cartoon_url(day)))
+        cartoons += parse_guardian_cartoons(fetcher(GUARDIAN_CARTOONS_URL), fetcher, now or datetime.now(timezone.utc))
     except Exception:
         pass
     if not photos and not videos and not cartoons:

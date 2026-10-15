@@ -1,9 +1,10 @@
 import json
 import io
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
-from server import (Feed, Handler, SettingsStore, SCREEN_DURATIONS, load_pictures, parse_loc_cartoons, parse_nasa_iotd, parse_wikimedia_motd, parse_wikimedia_potd, pick_nasa_archive, add_temperatures, fetch, fetch_head, load_major_cities,
+from server import (Feed, Handler, SettingsStore, SCREEN_DURATIONS, load_pictures, parse_guardian_cartoons, parse_nasa_iotd, parse_wikimedia_motd, parse_wikimedia_potd, pick_nasa_archive, add_temperatures, fetch, fetch_head, load_major_cities,
                     location_url, nearby_temperature_url, normalize_postal_code,
                     parse_alerts, parse_air_quality, parse_location, parse_news, parse_quote, parse_radar, parse_weather,
                     select_major_cities, weather_url)
@@ -275,27 +276,34 @@ class NasaPictureTests(unittest.TestCase):
 
 
 class PoliticalCartoonTests(unittest.TestCase):
-    def test_library_of_congress_uses_largest_safe_image_and_public_domain_credit(self):
-        raw = json.dumps({"results": [{
-            "title": "The rail splitter at work", "date": "1865",
-            "description": ["A political cartoon about reconstruction."],
-            "url": "https://www.loc.gov/item/123/",
-            "image_url": ["https://tile.loc.gov/example_150px.jpg#h=150&w=100",
-                          "https://tile.loc.gov/example.jpg#h=800&w=1200",
-                          "https://untrusted.example/full.jpg#h=2000&w=3000"],
-        }]})
-        cartoon = parse_loc_cartoons(raw)[0]
-        self.assertEqual(cartoon["url"], "https://tile.loc.gov/example.jpg")
-        self.assertEqual(cartoon["kicker"], "Political cartoon archive · 1865")
-        self.assertEqual(cartoon["credit"], "Library of Congress · Public domain")
-        self.assertEqual(cartoon["page_url"], "https://www.loc.gov/item/123/")
+    NOW = datetime(2026, 10, 15, tzinfo=timezone.utc)
 
-    def test_collection_records_without_tile_images_are_skipped(self):
-        raw = json.dumps({"results": [
-            {"title": "Collection guide", "image_url": ["https://www.loc.gov/static/collection.jpg"]},
-            {"title": "A cartoon", "image_url": ["https://tile.loc.gov/cartoon.jpg"]},
-        ]})
-        self.assertEqual([item["title"] for item in parse_loc_cartoons(raw)], ["A cartoon"])
+    def feed(self, items):
+        return f'<rss xmlns:media="http://search.yahoo.com/mrss/" xmlns:dc="http://purl.org/dc/elements/1.1/"><channel>{items}</channel></rss>'
+
+    def item(self, title="A current cartoon | Jane Artist", date="Wed, 14 Oct 2026 05:00:00 GMT",
+             categories=("US news",)):
+        tags = "".join(f"<category>{category}</category>" for category in categories)
+        return f'''<item><title>{title}</title><link>https://www.theguardian.com/commentisfree/picture/current</link>
+          <description>&lt;p&gt;A sharp take on this week's news.&lt;/p&gt;</description><pubDate>{date}</pubDate>{tags}
+          <media:content width="700" url="https://i.guim.co.uk/img/media/id/master/cartoon.jpg?width=700"/>
+          <dc:creator>Jane Artist</dc:creator></item>'''
+
+    def test_current_political_cartoon_uses_uncropped_1920px_page_image(self):
+        page = 'https://i.guim.co.uk/img/media/id/master/cartoon.jpg?width=1920&amp;quality=85&amp;auto=format&amp;fit=max&amp;s=signed'
+        cartoon = parse_guardian_cartoons(self.feed(self.item()), Mock(return_value=page), self.NOW)[0]
+        self.assertIn("width=1920", cartoon["url"])
+        self.assertIn("fit=max", cartoon["url"])
+        self.assertEqual(cartoon["title"], "A current cartoon")
+        self.assertEqual(cartoon["credit"], "Jane Artist · The Guardian")
+        self.assertEqual(cartoon["kicker"], "Political cartoon · This week")
+
+    def test_older_and_nonpolitical_cartoons_are_skipped(self):
+        items = self.item(title="Old cartoon", date="Wed, 07 Oct 2026 05:00:00 GMT") + self.item(
+            title="Football cartoon", categories=("Football", "Sport")) + self.item(title="Current politics cartoon")
+        cartoons = parse_guardian_cartoons(self.feed(items), Mock(side_effect=OSError("offline")), self.NOW)
+        self.assertEqual([item["title"] for item in cartoons], ["Current politics cartoon"])
+        self.assertIn("width=700", cartoons[0]["url"])
 
 
 class WikimediaMediaTests(unittest.TestCase):

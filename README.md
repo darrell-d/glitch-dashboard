@@ -71,8 +71,8 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
 - **Quotes:** Random quotes from `https://darrelld.com/quote/json/random`, set in
   an editorial lockup with a vertical accent rule and the author below a fine rule.
 - **Featured media:** Wikimedia Commons pictures of the day join the existing NASA
-  picture pool. One public-domain historical political cartoon from the Library of
-  Congress and one Commons media-of-the-day video are shuffled into each edition.
+  picture pool. One political cartoon published by The Guardian within the previous
+  seven days and one Commons media-of-the-day video are shuffled into each edition.
   Video is shown full-screen over a blurred poster fill, autoplayed muted for kiosk
   reliability, and advances to the next screen when playback ends.
 
@@ -103,10 +103,10 @@ random public-domain images from the [NASA Image and Video Library](https://imag
 picked once per day from astronomy and planetary topics with filters that skip catalog
 codes, ground operations, and thin descriptions, plus five official
 [Wikimedia Commons pictures of the day](https://commons.wikimedia.org/wiki/Commons:Picture_of_the_day).
-One historical, public-domain political cartoon from the Library of Congress
-[American Cartoon Prints](https://www.loc.gov/collections/american-cartoon-prints/) collection
-appears per edition using the same full-screen blurred-backdrop treatment. Its catalog page changes
-daily and the browser cycles through that page's cartoons before repeating.
+One current political cartoon from [The Guardian's cartoons feed](https://www.theguardian.com/tone/cartoons)
+appears per edition using the same full-screen blurred-backdrop treatment. Only politics and world-news
+cartoons from the previous seven days qualify; their official pages provide the highest-resolution
+uncropped image available.
 The official Commons media-of-the-day feed supplies direct video transcodes and posters;
 one video appears per edition, controls its own duration, and shows a shrinking remaining-time bar. No API key is needed. Reuters and the
 Guardian were considered: Reuters prohibits automated collection, and the Guardian's free

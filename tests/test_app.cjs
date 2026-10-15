@@ -157,16 +157,16 @@ test('NASA pictures appear in the next batch with title, description, and credit
 });
 
 test('one political cartoon is mixed into each edition as a full-screen picture', async () => {
-  const cartoons = [1, 2].map((i) => ({ url: `https://tile.loc.gov/cartoon-${i}.jpg`,
-    kicker: `Political cartoon archive · 18${i}0`, title: `Cartoon ${i}`,
-    description: `Description ${i}`, credit: 'Library of Congress · Public domain' }));
+  const cartoons = [1, 2].map((i) => ({ url: `https://i.guim.co.uk/cartoon-${i}.jpg`,
+    kicker: 'Political cartoon · This week', title: `Cartoon ${i}`,
+    description: `Description ${i}`, credit: `Artist ${i} · The Guardian` }));
   const screen = await app('', { cartoons });
   screen.run('showPanel(screens.length)');
   const shown = screen.run("screens.filter((item) => item.item?.kicker?.startsWith('Political cartoon')).map((item) => item.item.url)");
   assert.equal(shown.length, 1);
   screen.run("showPanel(screens.findIndex((item) => item.item?.kicker?.startsWith('Political cartoon')))");
   assert.match(screen.elements['picture-caption'].textContent, /^Cartoon [12]$/);
-  assert.equal(screen.elements['picture-credit'].textContent, 'Image: Library of Congress · Public domain');
+  assert.match(screen.elements['picture-credit'].textContent, /^Image: Artist [12] · The Guardian$/);
 });
 
 test('featured video owns rotation until playback ends', async () => {

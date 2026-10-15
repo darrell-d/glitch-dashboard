@@ -13,8 +13,8 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   server (`/api/settings`, `data/settings.json`); other display options stay in the browser.
 - Daily pictures: five newest NASA Images of the Day, five daily random NASA Image Library picks,
   and five Wikimedia Commons pictures of the day (`load_pictures`), three per batch in random
-  non-adjacent gaps (`createEdition`). One historical public-domain political cartoon from the
-  Library of Congress is guaranteed per batch using the same picture screen. One Wikimedia
+  non-adjacent gaps (`createEdition`). One political cartoon published by The Guardian within the
+  last seven days is guaranteed per batch using the same picture screen. One Wikimedia
   media-of-the-day video is also inserted per batch, autoplays muted, owns rotation until playback
   ends, and shows a remaining-time bar. Do not
   scrape Reuters, NYT, or Bloomberg pages (automated collection prohibited or blocked); the

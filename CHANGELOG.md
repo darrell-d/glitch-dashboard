@@ -4,8 +4,8 @@
 
 ### Features
 
-- Add one public-domain historical political cartoon from the Library of Congress
-  American Cartoon Prints collection to every rotation batch.
+- Add one modern political cartoon published by The Guardian within the previous
+  seven days to every rotation batch, using its highest-resolution uncropped rendition.
 - Default the weather screen to one minute and show a smooth remaining-time bar on
   featured videos until playback completes.
 - Listen on all interfaces (`0.0.0.0`) by default, including in Compose, so other devices
