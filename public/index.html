@@ -6,14 +6,15 @@
   <meta name="theme-color" content="#101815">
   <title>The Daily</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%23101815'/%3E%3Ctext x='9' y='29' fill='%23c6f294' font-size='30'%3Eg%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/styles.css?v=daily-32">
-  <link rel="stylesheet" href="/newspaper.css?v=daily-32">
-  <script src="/edition.js?v=daily-32" defer></script>
-  <script src="/weather.js?v=daily-32" defer></script>
-  <script src="/moon.js?v=daily-32" defer></script>
-  <script src="/signals.js?v=daily-32" defer></script>
-  <script src="/radar.js?v=daily-32" defer></script>
-  <script src="/app.js?v=daily-32" defer></script>
+  <link rel="stylesheet" href="/styles.css?v=daily-33">
+  <link rel="stylesheet" href="/newspaper.css?v=daily-33">
+  <script src="/edition.js?v=daily-33" defer></script>
+  <script src="/weather.js?v=daily-33" defer></script>
+  <script src="/moon.js?v=daily-33" defer></script>
+  <script src="/signals.js?v=daily-33" defer></script>
+  <script src="/radar.js?v=daily-33" defer></script>
+  <script src="/lawnmower.js?v=daily-33" defer></script>
+  <script src="/app.js?v=daily-33" defer></script>
 </head>
 <body data-transition="fade">
   <main id="display">
@@ -115,6 +116,10 @@
     <section class="panel gallery" id="gallery" aria-label="Photos from today's stories" inert aria-hidden="true">
       <div id="gallery-rows" class="gallery-rows"></div>
     </section>
+
+    <section class="panel lawnmower" id="lawnmower" aria-label="Evolving robot lawnmower simulation" inert aria-hidden="true">
+      <canvas id="lawnmower-canvas"></canvas>
+    </section>
   </main>
 
   <footer class="footer">
@@ -149,6 +154,7 @@
           <label for="time-quote">Quote</label><input id="time-quote" type="number" min="5" max="3600" step="1" required>
           <label for="time-gallery">Photo wall</label><input id="time-gallery" type="number" min="5" max="3600" step="1" required>
           <label for="time-picture">Pictures of the day</label><input id="time-picture" type="number" min="5" max="3600" step="1" required>
+          <label for="time-lawnmower">LawnMower</label><input id="time-lawnmower" type="number" min="5" max="3600" step="1" required>
         </div>
         <p id="screen-times-status" role="status"></p>
       </div>
@@ -164,6 +170,7 @@
           <label for="weight-picture">Daily pictures</label><input id="weight-picture" type="number" min="0" max="1000" step="1" required>
           <label for="weight-cartoon">Political cartoons</label><input id="weight-cartoon" type="number" min="0" max="1000" step="1" required>
           <label for="weight-media">Videos</label><input id="weight-media" type="number" min="0" max="1000" step="1" required>
+          <label for="weight-lawnmower">LawnMower</label><input id="weight-lawnmower" type="number" min="0" max="1000" step="1" required>
         </div>
         <p>Maximum number of other screens allowed before important information returns.</p>
         <div class="screen-times">

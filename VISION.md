@@ -118,7 +118,8 @@ screen module when tighter lifecycle or performance control is worthwhile.
 1. Evolve the weighted random scheduler into a screen registry with explicit lifecycle
    hooks. Per-screen timing, weights, recurrence limits, and non-repeating content pools
    are complete.
-2. Audit LawnMower and expose it as an autonomous, full-screen dashboard screen.
+2. LawnMower is complete as an autonomous full-screen canvas screen whose simulation
+   continues running after its first appearance.
 3. Add the first native generative-art screen, likely a high-resolution Mandelbrot
    renderer.
 4. Add more mathematical and procedural screens behind the same interface.

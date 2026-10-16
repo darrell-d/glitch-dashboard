@@ -19,7 +19,8 @@
 - [x] Replace the fixed panel sequence with a weighted random scheduler, recurrence guardrails,
   non-repeating content pools, and server-backed Settings controls.
 - [ ] Refactor the weighted scheduler into an extensible screen registry and lifecycle hooks.
-- [ ] Add `/Users/darrelldefreitas/code/gen_art/LawnMower` as an autonomous full-screen web screen.
+- [x] Add `/Users/darrelldefreitas/code/gen_art/LawnMower` as a persistent autonomous
+  full-screen canvas screen that continues evolving between appearances.
 - [ ] Add a high-resolution Mandelbrot or related mathematical generative-art screen.
 - [ ] Add reusable full-viewport treatments for art that does not match the display aspect ratio.
 - [ ] Harden startup, recovery, resource cleanup, and diagnostics for unattended operation.

@@ -4,6 +4,11 @@
 
 ### Features
 
+- Add LawnMower as a weighted full-screen generative-art canvas, porting the original Java
+  simulation's grass growth, mower movement, and cutting behavior. Its first appearance starts
+  a persistent 10 FPS world that keeps evolving while hidden and resumes without resetting.
+- Add LawnMower duration and weight controls to Settings, defaulting to 60 seconds and a relative
+  weight of 3.
 - Replace the fixed display order with stable 20-screen weighted random editions. News defaults
   to 50%, current weather to 20%, radar to 10%, and supporting screens share the remaining 20%.
   Configurable recurrence limits keep news and the combined weather group from disappearing for

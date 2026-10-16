@@ -4,7 +4,7 @@
 
   const ROTATION_SIZE = 20;
   const DEFAULT_WEIGHTS = { article: 50, weather: 20, radar: 10, markets: 4, quote: 4,
-    gallery: 4, picture: 3, cartoon: 3, media: 2 };
+    gallery: 4, picture: 3, cartoon: 3, media: 2, lawnmower: 3 };
   const DEFAULT_GUARDS = { maxNewsGap: 3, maxWeatherGap: 6 };
 
   function shuffle(items, random = Math.random) {

@@ -75,10 +75,15 @@ browser's kiosk mode for automatic fullscreen on a dedicated display.
   seven days and one Commons media-of-the-day video are shuffled into each edition.
   Video is shown full-screen over a blurred poster fill, autoplayed muted for kiosk
   reliability, and advances to the next screen when playback ends.
+- **LawnMower:** A browser-canvas port of the Java Swing simulation in
+  `/Users/darrelldefreitas/code/gen_art/LawnMower`. The 100×75 grass world fills the
+  viewport at native display resolution. It starts the first time its weighted screen
+  appears, then continues evolving at 10 FPS while hidden so every later appearance
+  resumes the same run.
 
 Each 20-screen edition is built with weighted random selection. Defaults give news 50%,
-current weather 20%, radar 10%, and divide the remaining 20% among markets, quotes,
-the photo wall, daily pictures, current political cartoons, and featured video. Weather
+current weather 20%, radar 10%, and give smaller relative weights to markets, quotes,
+the photo wall, daily pictures, current political cartoons, featured video, and LawnMower. Weather
 and radar share one recurrence group; by default no more than three other screens can
 separate news and no more than six can separate either kind of weather. Consecutive
 screens avoid the same screen type when another enabled choice is available. Weights

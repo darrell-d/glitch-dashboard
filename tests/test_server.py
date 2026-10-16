@@ -198,7 +198,9 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(self.store.get()["screen_durations"]["markets"], 60)
         self.assertEqual(self.store.get()["screen_durations"]["weather"], 120)
         self.assertEqual(self.store.get()["screen_durations"]["radar"], 120)
+        self.assertEqual(self.store.get()["screen_durations"]["lawnmower"], 60)
         self.assertEqual(self.store.get()["rotation"]["weights"]["article"], 50)
+        self.assertEqual(self.store.get()["rotation"]["weights"]["lawnmower"], 3)
         self.assertEqual(self.store.get()["rotation"]["max_weather_gap"], 6)
         self.store.save({"screen_durations": {"markets": 90}})
         reloaded = SettingsStore(self.store.path).get()["screen_durations"]

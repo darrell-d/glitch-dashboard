@@ -8,12 +8,13 @@ const WeatherVisual = require('../public/weather.js');
 const MoonPhase = require('../public/moon.js');
 const WeatherSignals = require('../public/signals.js');
 const RadarMap = require('../public/radar.js');
+const LawnMowerArt = { shows: 0, show() { this.shows += 1; }, hide() {}, resize() {} };
 
 const rotationSettings = (weights = {}, screenDurations = {}) => ({
   screen_durations: { article: 30, weather: 120, radar: 120, markets: 60, quote: 30, gallery: 300, picture: 20,
     ...screenDurations },
   rotation: { weights: { article: 50, weather: 20, radar: 10, markets: 4, quote: 4, gallery: 4,
-    picture: 3, cartoon: 3, media: 2, ...weights }, max_news_gap: 3, max_weather_gap: 6 },
+    picture: 3, cartoon: 3, media: 2, lawnmower: 3, ...weights }, max_news_gap: 3, max_weather_gap: 6 },
 });
 
 // Exercise the actual app's navigation/timer with a minimal DOM, without a browser.
@@ -68,7 +69,8 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
     querySelector: (selector) => extras[selector],
     addEventListener: (event, callback) => { listeners[event] = callback; },
   };
-  const context = vm.createContext({ document, location, DashboardEdition, WeatherVisual, MoonPhase, WeatherSignals, RadarMap,
+  LawnMowerArt.shows = 0;
+  const context = vm.createContext({ document, location, DashboardEdition, WeatherVisual, MoonPhase, WeatherSignals, RadarMap, LawnMowerArt,
     window: { addEventListener() {} }, history: { replaceState: (_, __, hash) => { location.hash = hash; } },
     localStorage: { getItem: () => null, setItem: (key, value) => { stored[key] = value; } }, performance: { now: () => now },
     getComputedStyle: () => ({ fontSize: '32px' }), requestAnimationFrame: (callback) => frames.push(callback),
@@ -98,7 +100,7 @@ async function app(hash = '', { storyCount = 3, weather = null, settings = null,
 
 test('stories appear immediately and automatic rotation advances to the next scheduled screen', async () => {
   const screen = await app('', { settings: rotationSettings({ article: 1, weather: 0, radar: 0, markets: 0,
-    quote: 0, gallery: 0, picture: 0, cartoon: 0, media: 0 }) });
+    quote: 0, gallery: 0, picture: 0, cartoon: 0, media: 0, lawnmower: 0 }) });
   assert.equal(screen.elements['article-title'].textContent, 'Story 0');
   const nextPanel = screen.run('screens[1].panel');
   screen.advance(31000);
@@ -109,7 +111,7 @@ test('stories appear immediately and automatic rotation advances to the next sch
 
 test('the photo wall stays up five minutes by default', async () => {
   const screen = await app('', { storyCount: 6, settings: rotationSettings({ article: 0, weather: 0, radar: 0,
-    markets: 0, quote: 0, gallery: 1, picture: 0, cartoon: 0, media: 0 }) });
+    markets: 0, quote: 0, gallery: 1, picture: 0, cartoon: 0, media: 0, lawnmower: 0 }) });
   screen.run("showPanel(screens.findIndex((item) => item.panel === 'gallery'))");
   const start = screen.run('current');
   assert.equal(screen.elements.gallery.classList.contains('active'), true);
@@ -134,7 +136,7 @@ test('weather and radar each stay up two minutes by default', async () => {
 
 test('screen times come from the server and are saved from the settings tab', async () => {
   const screen = await app('', { settings: rotationSettings({ article: 1, weather: 0, radar: 0, markets: 0,
-    quote: 0, gallery: 0, picture: 0, cartoon: 0, media: 0 }, { article: 10, weather: 30, radar: 30 }) });
+    quote: 0, gallery: 0, picture: 0, cartoon: 0, media: 0, lawnmower: 0 }, { article: 10, weather: 30, radar: 30 }) });
   assert.equal(screen.elements.article.classList.contains('active'), true);
   screen.advance(11000);
   assert.equal(screen.elements['article-title'].textContent, 'Story 1');
@@ -165,7 +167,7 @@ test('NASA pictures follow their configured weight with title, description, and 
   const pictures = [1, 2, 3, 4].map((i) => ({ url: `https://images-assets.nasa.gov/p${i}~large.jpg`, kicker: 'NASA Image of the Day',
     title: `Title ${i}`, description: `Description ${i}`, credit: `Photographer ${i}` }));
   const screen = await app('', { pictures, settings: rotationSettings({ article: 0, weather: 0, radar: 0, markets: 0,
-    quote: 0, gallery: 0, picture: 1, cartoon: 0, media: 0 }) });
+    quote: 0, gallery: 0, picture: 1, cartoon: 0, media: 0, lawnmower: 0 }) });
   screen.run('showPanel(screens.length)');
   const shown = screen.run("screens.filter((item) => item.panel === 'picture').map((item) => item.item.url)");
   assert.equal(shown.length, 20);
@@ -183,7 +185,7 @@ test('political cartoons participate by weight as full-screen pictures', async (
     kicker: 'Political cartoon · This week', title: `Cartoon ${i}`,
     description: `Description ${i}`, credit: `Artist ${i} · The Guardian` }));
   const screen = await app('', { cartoons, settings: rotationSettings({ article: 0, weather: 0, radar: 0, markets: 0,
-    quote: 0, gallery: 0, picture: 0, cartoon: 1, media: 0 }) });
+    quote: 0, gallery: 0, picture: 0, cartoon: 1, media: 0, lawnmower: 0 }) });
   screen.run('showPanel(screens.length)');
   const shown = screen.run("screens.filter((item) => item.item?.kicker?.startsWith('Political cartoon')).map((item) => item.item.url)");
   assert.equal(shown.length, 20);
@@ -198,7 +200,7 @@ test('featured video owns rotation until playback ends', async () => {
     poster: 'https://thumb.wikimedia.org/poster.jpg', kicker: 'Wikimedia media of the day',
     title: 'A featured film', credit: 'Wikimedia Commons contributors' }];
   const screen = await app('', { media, settings: rotationSettings({ article: 0, weather: 0, radar: 0, markets: 0,
-    quote: 0, gallery: 0, picture: 0, cartoon: 0, media: 1 }) });
+    quote: 0, gallery: 0, picture: 0, cartoon: 0, media: 1, lawnmower: 0 }) });
   screen.run('showPanel(screens.length)');
   screen.run("showPanel(screens.findIndex((item) => item.panel === 'media'))");
   assert.equal(screen.elements.media.classList.contains('active'), true);
@@ -214,6 +216,15 @@ test('featured video owns rotation until playback ends', async () => {
   const mediaIndex = screen.run('current');
   screen.elements['media-video'].onended();
   assert.notEqual(screen.run('current'), mediaIndex);
+});
+
+test('LawnMower starts on first display and reuses its running instance', async () => {
+  const screen = await app('', { settings: rotationSettings({ article: 0, weather: 0, radar: 0, markets: 0,
+    quote: 0, gallery: 0, picture: 0, cartoon: 0, media: 0, lawnmower: 1 }) });
+  assert.equal(screen.elements.lawnmower.classList.contains('active'), true);
+  assert.equal(screen.run('LawnMowerArt.shows'), 1);
+  screen.run('showPanel(1)');
+  assert.equal(screen.run('LawnMowerArt.shows'), 2);
 });
 
 test('M toggles video sound and is remembered', async () => {

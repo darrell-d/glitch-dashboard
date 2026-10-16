@@ -2,7 +2,7 @@
 
 const $ = (id) => document.getElementById(id);
 const names = ['news', 'weather', 'radar', 'quote'];
-const panels = ['news', 'article', 'weather', 'radar', 'markets', 'quote', 'gallery', 'picture', 'media'];
+const panels = ['news', 'article', 'weather', 'radar', 'markets', 'quote', 'gallery', 'picture', 'media', 'lawnmower'];
 const GALLERY_ROWS = 3;
 const GALLERY_MIN_PHOTOS = 6;
 // Photo-wall rows cycle standard, faster, slower; the standard pace is 14 seconds per photo.
@@ -40,7 +40,7 @@ function validOptions(value) {
     && (value.weatherIconColor === undefined || /^#[0-9a-f]{6}$/i.test(value.weatherIconColor));
 }
 // Seconds per kind of screen. The server keeps the shared values; this browser keeps a copy.
-const SCREEN_DURATIONS = { article: 30, weather: 120, radar: 120, markets: 60, quote: 30, gallery: 300, picture: 20 };
+const SCREEN_DURATIONS = { article: 30, weather: 120, radar: 120, markets: 60, quote: 30, gallery: 300, picture: 20, lawnmower: 60 };
 const SCREEN_TYPES = Object.keys(SCREEN_DURATIONS);
 const ROTATION_TYPES = Object.keys(DashboardEdition.DEFAULT_WEIGHTS);
 function validDurations(value) {
@@ -50,7 +50,8 @@ function validDurations(value) {
 let screenDurations = { ...SCREEN_DURATIONS, ...validDurations(readStored('glitch-screen-durations')) };
 function validRotation(value) {
   if (!value || typeof value !== 'object' || !value.weights || typeof value.weights !== 'object') return null;
-  const weights = Object.fromEntries(ROTATION_TYPES.map((screen) => [screen, Number(value.weights[screen])]));
+  const weights = Object.fromEntries(ROTATION_TYPES.map((screen) =>
+    [screen, Number(value.weights[screen] ?? DashboardEdition.DEFAULT_WEIGHTS[screen])]));
   if (Object.values(weights).some((weight) => !Number.isInteger(weight) || weight < 0 || weight > 1000)
       || !Object.values(weights).some((weight) => weight > 0)) return null;
   const maxNewsGap = Number(value.max_news_gap);
@@ -679,6 +680,8 @@ function showPanel(index) {
   if (screen.panel === 'article') renderArticle(screen);
   if (screen.panel === 'picture') renderPicture(screen.item);
   if (screen.panel === 'media') renderMedia(screen.item);
+  if (screen.panel === 'lawnmower') LawnMowerArt.show($('lawnmower-canvas'));
+  else LawnMowerArt.hide();
   if (screen.panel === 'radar') showRadarFrame(radarFrameIndex);
   if (screen.panel === 'quote') { refresh('quote'); requestAnimationFrame(fitQuote); }
   history.replaceState(null, '', `#${screen.panel}`);
@@ -827,6 +830,7 @@ document.addEventListener('keydown', (event) => {
 });
 window.addEventListener('resize', () => {
   fitQuote(); fitArticle();
+  LawnMowerArt.resize();
   if (records.weather?.data) renderWeather(records.weather.data);
   if (records.radar?.data) renderRadar(records.radar.data);
 });

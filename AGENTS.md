@@ -20,11 +20,15 @@ CSS, and JavaScript. curl is required for POLITICO (included in Docker).
   scrape Reuters, NYT, or Bloomberg pages (automated collection prohibited or blocked); the
   Guardian's free API tier excludes current galleries.
 - `public/edition.js` creates stable 20-screen weighted editions. Default weights are article 50,
-  weather 20, radar 10, markets 4, quote 4, photo wall 4, daily picture 3, cartoon 3, and video 2.
+  weather 20, radar 10, markets 4, quote 4, photo wall 4, daily picture 3, cartoon 3, video 2,
+  and LawnMower 3.
   Weather and radar share a recurrence group. Avoid adjacent copies of the same screen type when another
   enabled screen is available; allow at most three non-news screens and six non-weather screens by
   default. Both weights and gaps are server settings. Content pools exhaust available articles and
   art before repeating, and feed refreshes wait for the next edition. No headline overview/list.
+- LawnMower is a native browser-canvas port of `../gen_art/LawnMower` with default weight 3 and
+  duration 60 seconds. It initializes on first activation, continues simulating at 10 FPS while
+  hidden, and paints only while visible. Preserve that long-lived state across rotations.
 - Use requestAnimationFrame for smooth elapsed-time progress, preserving pause
   and resume. Keep upstream polling independent of that animation loop.
 - Newspaper pages use RSS headlines, images/captions/credits, and short

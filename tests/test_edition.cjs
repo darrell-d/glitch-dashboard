@@ -59,11 +59,11 @@ test('zero-weight and unavailable screens are omitted', () => {
 });
 
 test('edition maps scheduled content kinds to their display panels', () => {
-  const schedule = ['article', 'weather', 'cartoon', 'radar', 'picture', 'media', 'quote'];
+  const schedule = ['article', 'weather', 'cartoon', 'radar', 'picture', 'media', 'lawnmower', 'quote'];
   const edition = createEdition([story(1)], { schedule, pictures: [{ url: 'p1' }],
     cartoons: [{ url: 'c1' }], media: [{ url: 'v1' }] });
   assert.deepEqual(edition.map((screen) => screen.panel),
-    ['article', 'weather', 'picture', 'radar', 'picture', 'media', 'quote']);
+    ['article', 'weather', 'picture', 'radar', 'picture', 'media', 'lawnmower', 'quote']);
   assert.deepEqual(edition.map((screen) => screen.kind), schedule);
   assert.equal(edition[2].item.url, 'c1');
 });
